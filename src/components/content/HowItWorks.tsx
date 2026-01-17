@@ -1,4 +1,5 @@
 import { Callout } from './Callout';
+import { SIMPExplainer } from './SIMPExplainer';
 
 export function HowItWorks() {
   return (
@@ -62,6 +63,9 @@ export function HowItWorks() {
         align material along the directions where forces flow through the structure, similar 
         to how the grain in wood follows the tree&apos;s natural stress patterns.
       </Callout>
+      
+      {/* Interactive SIMP Material Model Explainer */}
+      <SIMPExplainer />
       
       <h2 className="text-2xl font-semibold text-foreground mt-8 mb-4">
         Understanding the Visualization
