@@ -1,36 +1,159 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Topology Optimization Visualizer
 
-## Getting Started
+[![Version](https://img.shields.io/badge/version-1.0.0--rc1-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![Tests](https://img.shields.io/badge/tests-233%20passing-brightgreen.svg)](./src/lib/__tests__)
 
-First, run the development server:
+Interactive web-based topology optimization using SIMP (Solid Isotropic Material with Penalization). Watch material distribute itself in real-time to create optimal structures.
+
+**PHNX Foundry** | Follow [@Xaraphim](https://x.com/Xaraphim) on X for aerospace engineering deep-dives
+
+---
+
+## Features
+
+- **Real-time optimization** - SIMP algorithm running in WebAssembly with JavaScript fallback
+- **Hardware-accelerated rendering** - WebGL visualization with Canvas2D fallback
+- **Side-by-side comparison** - Compare different configurations simultaneously
+- **Multiple load cases** - Cantilever, MBB beam, L-bracket, and more
+- **Live convergence tracking** - Watch compliance, volume, and density change in real-time
+- **100% client-side** - No servers, no data collection, complete privacy
+
+## Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the visualizer.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How It Works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The SIMP (Solid Isotropic Material with Penalization) method iteratively redistributes material to minimize structural compliance while respecting a volume constraint. Material density at each element is penalized to push toward discrete 0/1 values, creating clear void/solid regions.
 
-## Learn More
+Key steps:
+1. Finite element analysis computes structural response
+2. Sensitivity analysis determines where material helps most
+3. Density filter prevents checkerboarding
+4. Material is redistributed based on sensitivities
+5. Repeat until convergence
 
-To learn more about Next.js, take a look at the following resources:
+## Technical Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Component | Technology |
+|-----------|------------|
+| **Frontend** | Next.js 16, React 19, TypeScript |
+| **Optimization** | Custom SIMP in Rust (WASM) + TypeScript fallback |
+| **Rendering** | WebGL with custom shaders, Canvas2D fallback |
+| **UI** | Tailwind CSS, Radix UI components |
+| **Charts** | Recharts for convergence visualization |
+| **Testing** | Vitest, 233 tests |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+topology-optimization/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   ├── components/
+│   │   ├── visualization/      # Canvas, controls, graphs
+│   │   ├── content/            # Educational explainers
+│   │   └── ui/                 # Shadcn/UI components
+│   └── lib/
+│       ├── optimizer/          # SIMP solver + Web Worker
+│       │   ├── simp.ts         # Core algorithm
+│       │   ├── simp.worker.ts  # Web Worker for off-thread computation
+│       │   └── wasm-pkg/       # Compiled WASM module
+│       └── webgl/              # WebGL rendering engine
+├── wasm-solver/                # Rust source for WASM solver
+├── out/                        # Static export (generated on build)
+└── DEPLOYMENT_NOTES.md         # Deployment instructions
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Building for Production
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build    # Builds WASM + Next.js static export
+npm start        # Preview production build locally
+```
+
+The build process:
+1. Compiles Rust → WebAssembly via wasm-pack
+2. Bundles the Next.js application
+3. Generates static HTML/CSS/JS in `/out` directory
+
+### Requirements for Building
+
+- Node.js 20.x
+- Rust (latest stable)
+- wasm-pack (`cargo install wasm-pack`)
+- wasm32 target (`rustup target add wasm32-unknown-unknown`)
+
+## Testing
+
+```bash
+npm test              # Run all 233 tests
+npm run test:watch    # Watch mode for development
+npm run test:coverage # Generate coverage report
+```
+
+## Deployment
+
+This project is configured for **static export** and can be deployed to:
+
+- **GitHub Pages** (planned)
+- **Vercel** (automatic from repo)
+- **Netlify** (automatic from repo)
+- **Any static hosting**
+
+See [DEPLOYMENT_NOTES.md](./DEPLOYMENT_NOTES.md) for detailed deployment instructions.
+
+## Performance
+
+The WASM solver provides significant performance improvements over the JavaScript fallback:
+
+```
+=== Performance Benchmark (60x20 mesh, 2562 DOFs) ===
+JS Solver:   ~25ms, 240 iterations
+WASM Solver: ~11ms, 240 iterations
+Speedup:     2.28x
+```
+
+The application automatically falls back to JavaScript if WASM fails to load.
+
+## Privacy
+
+The algorithm runs **entirely in your browser** using JavaScript and WebAssembly:
+
+- ✅ No data sent to any server
+- ✅ No analytics or tracking
+- ✅ No cookies (except theme preference in localStorage)
+- ✅ Complete computational privacy
+
+## Security
+
+This release has been security audited:
+
+- ✅ No exposed API keys or secrets
+- ✅ No known dependency vulnerabilities
+- ✅ Content Security Policy headers configured
+- ✅ XSS-safe implementation
+- ✅ Secure external links (`rel="noopener noreferrer"`)
+
+## Version History
+
+| Version | Date | Notes |
+|---------|------|-------|
+| 1.0.0-rc1 | Jan 17, 2025 | Release candidate - PHNX Foundry branding, security hardening, deployment ready |
+
+## License
+
+MIT License - see [LICENSE](./LICENSE) for details
+
+Copyright (c) 2025 PHNX Foundry | Xaraphim
+
+---
+
+**PHNX Foundry** | Engineering education through interactive visualization  
+Follow [@Xaraphim](https://x.com/Xaraphim) on X

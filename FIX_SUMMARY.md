@@ -204,3 +204,7 @@ These are **intentional side effects** that occur once when configuration change
 **Result:** Graphs should now load reliably in both normal and split views.
 
 **Remaining work:** Optional cleanup of additional linter warnings (low priority)
+
+---
+
+**PHNX Foundry** | Follow [@Xaraphim](https://x.com/Xaraphim) on X

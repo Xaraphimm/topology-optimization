@@ -14,8 +14,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Topology Optimization - Interactive Demo",
+  title: "Topology Optimization - Interactive Demo | PHNX Foundry",
   description: "Learn how topology optimization works through an interactive demonstration. Watch material being removed in real-time as the algorithm finds the optimal structure.",
+  authors: [{ name: "Xaraphim", url: "https://x.com/Xaraphim" }],
+  creator: "PHNX Foundry",
+  keywords: ["topology optimization", "SIMP", "structural optimization", "engineering", "PHNX Foundry"],
+  openGraph: {
+    title: "Topology Optimization Visualizer",
+    description: "Interactive SIMP optimization - watch structures optimize in real-time",
+    type: "website",
+    siteName: "PHNX Foundry",
+  },
+  twitter: {
+    card: "summary_large_image",
+    creator: "@Xaraphim",
+  },
 };
 
 export default function RootLayout({
@@ -32,7 +45,25 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased transition-colors duration-200`}
       >
-        {children}
+        <div className="min-h-screen flex flex-col">
+          <main className="flex-1">
+            {children}
+          </main>
+          <footer className="border-t mt-12 py-6 text-center text-sm text-muted-foreground">
+            <p>
+              <strong>PHNX Foundry</strong> | Follow{' '}
+              <a 
+                href="https://x.com/Xaraphim" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-foreground transition-colors"
+              >
+                @Xaraphim
+              </a>
+              {' '}on X
+            </p>
+          </footer>
+        </div>
       </body>
     </html>
   );

@@ -18,7 +18,6 @@ export function ProgressInfo({
   maxIterations,
   compliance,
   volume,
-  change,
   converged,
   isRunning,
 }: ProgressInfoProps) {
