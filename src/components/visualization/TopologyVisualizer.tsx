@@ -6,8 +6,11 @@ import { Controls } from './Controls';
 import { ProgressInfo } from './ProgressInfo';
 import { ColorLegend } from './ColorLegend';
 import { ConvergenceGraphs } from './ConvergenceGraphs';
+import { ComparisonView } from './ComparisonView';
+import { Button } from '@/components/ui/button';
 import { useOptimizer, type UseOptimizerConfig } from '@/lib/optimizer/useOptimizer';
 import { PRESETS, RESOLUTIONS, getMeshDimensions, getPreset } from '@/lib/presets';
+import { Columns2 } from 'lucide-react';
 
 interface TopologyVisualizerProps {
   className?: string;
@@ -29,6 +32,9 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
   
   // Track if optimization has started (for showing view toggle and progress)
   const [hasStarted, setHasStarted] = useState(false);
+  
+  // Comparison mode state
+  const [comparisonMode, setComparisonMode] = useState(false);
   
   // Get current mesh dimensions and preset
   const preset = getPreset(selectedPreset) || PRESETS[0];
@@ -116,6 +122,25 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
   const handleVolumeFractionChange = useCallback((value: number) => {
     setVolumeFraction(value);
   }, []);
+  
+  // Comparison mode handlers
+  const handleEnterComparison = useCallback(() => {
+    if (isRunning) pause();
+    setComparisonMode(true);
+  }, [isRunning, pause]);
+  
+  const handleExitComparison = useCallback(() => {
+    setComparisonMode(false);
+  }, []);
+  
+  // Render comparison view if in comparison mode
+  if (comparisonMode) {
+    return (
+      <div className={className}>
+        <ComparisonView onExitComparison={handleExitComparison} />
+      </div>
+    );
+  }
   
   // Determine what densities to show
   // - Before start: show uniform density at volume fraction (preview)
@@ -219,6 +244,18 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
         onReset={handleReset}
         disabled={hasStarted}
       />
+      
+      {/* Compare button */}
+      <div className="flex justify-center pt-2">
+        <Button 
+          onClick={handleEnterComparison} 
+          variant="outline" 
+          className="gap-2"
+        >
+          <Columns2 className="w-4 h-4" />
+          Compare Side-by-Side
+        </Button>
+      </div>
     </div>
   );
 }
