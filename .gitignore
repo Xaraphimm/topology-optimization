@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Rust/WASM build artifacts
+/wasm-solver/target/
+/wasm-solver/pkg/
+*.wasm

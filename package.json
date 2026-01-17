@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "build:wasm": "cd wasm-solver && source $HOME/.cargo/env && wasm-pack build --target web --out-dir ../src/lib/optimizer/wasm-pkg",
+    "prebuild": "npm run build:wasm",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
