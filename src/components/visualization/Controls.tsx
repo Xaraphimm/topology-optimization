@@ -54,7 +54,7 @@ export function Controls({
       <div className="flex flex-wrap items-center gap-4">
         {/* Preset Tabs */}
         <div className="flex-1 min-w-[200px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Problem
           </label>
           <Tabs value={selectedPreset} onValueChange={onPresetChange}>
@@ -75,7 +75,7 @@ export function Controls({
         
         {/* Resolution Toggle */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Resolution
           </label>
           <Tabs value={selectedResolution} onValueChange={onResolutionChange}>
@@ -100,10 +100,10 @@ export function Controls({
         {/* Volume Slider */}
         <div className="flex-1 min-w-[200px]">
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-foreground">
               Material to keep
             </label>
-            <span className="text-sm font-mono text-gray-600">
+            <span className="text-sm font-mono text-muted-foreground">
               {Math.round(volumeFraction * 100)}%
             </span>
           </div>
@@ -116,7 +116,7 @@ export function Controls({
             disabled={disabled && isRunning}
             className="w-full"
           />
-          <div className="flex justify-between text-xs text-gray-400 mt-1">
+          <div className="flex justify-between text-xs text-muted-foreground mt-1">
             <span>Less material</span>
             <span>More material</span>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 
 interface Support {
   x: number;
@@ -26,6 +26,45 @@ interface CanvasProps {
   supports?: Support[];
   loads?: Load[];
   className?: string;
+  /** Initial volume fraction for rendering preview mesh when densities is null */
+  initialVolumeFraction?: number;
+}
+
+/**
+ * Hook to detect dark mode changes
+ */
+function useDarkMode(): boolean {
+  const [isDark, setIsDark] = useState(false);
+  
+  useEffect(() => {
+    // Check initial state
+    const checkDark = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    
+    checkDark();
+    
+    // Watch for class changes on <html>
+    const observer = new MutationObserver(checkDark);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+  
+  return isDark;
+}
+
+/**
+ * Create a uniform density array for the preview mesh
+ */
+function createUniformDensities(nelx: number, nely: number, volumeFraction: number): Float64Array {
+  const size = nelx * nely;
+  const densities = new Float64Array(size);
+  densities.fill(volumeFraction);
+  return densities;
 }
 
 /**
@@ -70,9 +109,11 @@ export function Canvas({
   viewMode,
   supports = [], 
   loads = [],
-  className = '' 
+  className = '',
+  initialVolumeFraction = 0.5,
 }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDark = useDarkMode();
   
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -95,25 +136,20 @@ export function Canvas({
     const elemWidth = displayWidth / nelx;
     const elemHeight = displayHeight / nely;
     
+    // Theme-aware colors
+    const bgColor = isDark ? '#1f2937' : '#f8fafc';
+    
     // Clear canvas
-    ctx.fillStyle = '#f8fafc';
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, displayWidth, displayHeight);
     
-    if (!densities) {
-      // Show placeholder
-      ctx.fillStyle = '#e5e7eb';
-      ctx.fillRect(0, 0, displayWidth, displayHeight);
-      ctx.fillStyle = '#9ca3af';
-      ctx.font = '16px system-ui, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Click "Start" to begin optimization', displayWidth / 2, displayHeight / 2);
-      return;
-    }
+    // Use actual densities if available, otherwise create uniform preview mesh
+    const displayDensities = densities || createUniformDensities(nelx, nely, initialVolumeFraction);
+    const isPreview = !densities;
     
     // For stress view, normalize strain energy to [0, 1]
     let maxStrainEnergy = 0;
-    if (viewMode === 'stress' && strainEnergy) {
+    if (viewMode === 'stress' && strainEnergy && !isPreview) {
       for (let i = 0; i < strainEnergy.length; i++) {
         if (strainEnergy[i] > maxStrainEnergy) {
           maxStrainEnergy = strainEnergy[i];
@@ -127,13 +163,13 @@ export function Canvas({
     for (let elx = 0; elx < nelx; elx++) {
       for (let ely = 0; ely < nely; ely++) {
         const elemIdx = elx * nely + ely;
-        const density = densities[elemIdx];
+        const density = displayDensities[elemIdx];
         
         // Canvas Y is flipped (0 at top), so we draw from top
         const canvasX = elx * elemWidth;
         const canvasY = (nely - 1 - ely) * elemHeight; // Flip Y
         
-        if (viewMode === 'material') {
+        if (viewMode === 'material' || isPreview) {
           // Convert density to grayscale (0=white/void, 1=black/solid)
           const gray = Math.round((1 - density) * 255);
           ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
@@ -152,47 +188,51 @@ export function Canvas({
       }
     }
     
-    // Draw supports
-    const nodeWidth = displayWidth / nelx;
-    const nodeHeight = displayHeight / nely;
-    
-    for (const support of supports) {
-      const canvasX = support.x * nodeWidth;
-      const canvasY = (nely - support.y) * nodeHeight; // Flip Y
+    // Always draw boundary conditions (supports and loads) - even in preview mode
+    // This gives users visual context about the problem setup before starting
+    {
+      // Draw supports
+      const nodeWidth = displayWidth / nelx;
+      const nodeHeight = displayHeight / nely;
       
-      ctx.save();
-      ctx.translate(canvasX, canvasY);
-      
-      if (support.type === 'pin') {
-        // Draw triangle for pin support
-        drawPinSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8);
-      } else if (support.type === 'roller-x') {
-        // Roller that allows Y movement (fixes X)
-        drawRollerSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8, 'vertical');
-      } else if (support.type === 'roller-y') {
-        // Roller that allows X movement (fixes Y)
-        drawRollerSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8, 'horizontal');
+      for (const support of supports) {
+        const canvasX = support.x * nodeWidth;
+        const canvasY = (nely - support.y) * nodeHeight; // Flip Y
+        
+        ctx.save();
+        ctx.translate(canvasX, canvasY);
+        
+        if (support.type === 'pin') {
+          // Draw triangle for pin support
+          drawPinSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8);
+        } else if (support.type === 'roller-x') {
+          // Roller that allows Y movement (fixes X)
+          drawRollerSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8, 'vertical');
+        } else if (support.type === 'roller-y') {
+          // Roller that allows X movement (fixes Y)
+          drawRollerSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8, 'horizontal');
+        }
+        
+        ctx.restore();
       }
       
-      ctx.restore();
+      // Draw loads
+      for (const load of loads) {
+        const canvasX = load.x * nodeWidth;
+        const canvasY = (nely - load.y) * nodeHeight; // Flip Y
+        
+        ctx.save();
+        ctx.translate(canvasX, canvasY);
+        
+        // Arrow pointing in direction of load
+        const arrowLength = Math.min(nodeWidth, nodeHeight) * 1.5;
+        drawArrow(ctx, 0, 0, load.dx * arrowLength, -load.dy * arrowLength); // Flip dy for canvas
+        
+        ctx.restore();
+      }
     }
     
-    // Draw loads
-    for (const load of loads) {
-      const canvasX = load.x * nodeWidth;
-      const canvasY = (nely - load.y) * nodeHeight; // Flip Y
-      
-      ctx.save();
-      ctx.translate(canvasX, canvasY);
-      
-      // Arrow pointing in direction of load
-      const arrowLength = Math.min(nodeWidth, nodeHeight) * 1.5;
-      drawArrow(ctx, 0, 0, load.dx * arrowLength, -load.dy * arrowLength); // Flip dy for canvas
-      
-      ctx.restore();
-    }
-    
-  }, [densities, strainEnergy, nelx, nely, viewMode, supports, loads]);
+  }, [densities, strainEnergy, nelx, nely, viewMode, supports, loads, isDark, initialVolumeFraction]);
   
   // Render on data change
   useEffect(() => {

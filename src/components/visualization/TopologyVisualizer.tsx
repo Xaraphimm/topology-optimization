@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Canvas, ViewMode } from './Canvas';
 import { Controls } from './Controls';
 import { ProgressInfo } from './ProgressInfo';
 import { ColorLegend } from './ColorLegend';
-import { SIMPOptimizer } from '@/lib/optimizer/simp';
+import { ConvergenceGraphs } from './ConvergenceGraphs';
+import { useOptimizer, type UseOptimizerConfig } from '@/lib/optimizer/useOptimizer';
 import { PRESETS, RESOLUTIONS, getMeshDimensions, getPreset } from '@/lib/presets';
-import type { OptimizationState } from '@/lib/optimizer/types';
 
 interface TopologyVisualizerProps {
   className?: string;
@@ -16,6 +16,9 @@ interface TopologyVisualizerProps {
 /**
  * Main topology optimization visualizer component
  * Orchestrates the optimizer, controls, and canvas
+ * 
+ * Now uses Web Worker for optimization to keep UI responsive.
+ * Displays boundary conditions immediately on load (no grey box).
  */
 export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) {
   // Selection state
@@ -24,176 +27,123 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
   const [volumeFraction, setVolumeFraction] = useState(0.5);
   const [viewMode, setViewMode] = useState<ViewMode>('material');
   
-  // Optimization state
-  const [isRunning, setIsRunning] = useState(false);
+  // Track if optimization has started (for showing view toggle and progress)
   const [hasStarted, setHasStarted] = useState(false);
-  const [state, setState] = useState<OptimizationState>({
-    densities: new Float64Array(0),
-    strainEnergy: new Float64Array(0),
-    compliance: Infinity,
-    volume: 0.5,
-    iteration: 0,
-    converged: false,
-    change: 1.0,
-  });
   
-  // Refs
-  const optimizerRef = useRef<SIMPOptimizer | null>(null);
-  const animationRef = useRef<number | null>(null);
-  
-  // Get current mesh dimensions
+  // Get current mesh dimensions and preset
   const preset = getPreset(selectedPreset) || PRESETS[0];
   const resolution = RESOLUTIONS.find(r => r.id === selectedResolution) || RESOLUTIONS[0];
   const { nelx, nely } = getMeshDimensions(preset, resolution);
   
-  // Get boundary condition visualization data
+  // Boundary condition visualization data
   const [bcData, setBcData] = useState<{
     supports: { x: number; y: number; type: 'pin' | 'roller-x' | 'roller-y' }[];
     loads: { x: number; y: number; dx: number; dy: number }[];
   }>({ supports: [], loads: [] });
   
-  // Initialize or reset optimizer
-  const initializeOptimizer = useCallback(() => {
-    const preset = getPreset(selectedPreset) || PRESETS[0];
-    const resolution = RESOLUTIONS.find(r => r.id === selectedResolution) || RESOLUTIONS[0];
-    const { nelx, nely } = getMeshDimensions(preset, resolution);
-    
-    // Create optimizer
-    const optimizer = new SIMPOptimizer({
-      nelx,
-      nely,
-      volfrac: volumeFraction,
-      penal: 3.0,
-      rmin: Math.max(1.5, nelx / 40), // Scale filter with resolution
-      maxIter: 200,
-      tolx: 0.01,
-    });
+  // Memoize optimizer configuration to prevent unnecessary re-initializations
+  const optimizerConfig = useMemo<UseOptimizerConfig | null>(() => {
+    const currentPreset = getPreset(selectedPreset) || PRESETS[0];
+    const currentResolution = RESOLUTIONS.find(r => r.id === selectedResolution) || RESOLUTIONS[0];
+    const dims = getMeshDimensions(currentPreset, currentResolution);
     
     // Set up problem
-    const { forces, fixedDofs, supports, loads } = preset.setup(nelx, nely);
-    optimizer.setForces(forces);
-    optimizer.setFixedDofs(fixedDofs);
+    const { forces, fixedDofs, supports, loads } = currentPreset.setup(dims.nelx, dims.nely);
     
-    optimizerRef.current = optimizer;
+    // Update BC data for visualization (side effect, but needed for Canvas)
+    // This is safe because it's derived from the same inputs
     setBcData({ supports, loads });
     
-    // Reset state
-    const initialState = optimizer.getState();
-    setState({
-      densities: new Float64Array(initialState.densities),
-      strainEnergy: new Float64Array(initialState.strainEnergy),
-      compliance: Infinity,
-      volume: volumeFraction,
-      iteration: 0,
-      converged: false,
-      change: 1.0,
-    });
-    
-    setHasStarted(false);
-    setViewMode('material'); // Reset to material view
+    return {
+      config: {
+        nelx: dims.nelx,
+        nely: dims.nely,
+        volfrac: volumeFraction,
+        penal: 3.0,
+        rmin: Math.max(1.5, dims.nelx / 40),
+        maxIter: 200,
+        tolx: 0.01,
+      },
+      forces,
+      fixedDofs,
+    };
   }, [selectedPreset, selectedResolution, volumeFraction]);
   
-  // Initialize on mount and when settings change
-  useEffect(() => {
-    initializeOptimizer();
-    
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [initializeOptimizer]);
+  // Use the Web Worker-based optimizer hook
+  const {
+    state,
+    history,
+    isRunning,
+    isReady,
+    error,
+    start,
+    pause,
+    reset,
+  } = useOptimizer(optimizerConfig);
   
-  // Animation loop
-  const runOptimization = useCallback(() => {
-    const optimizer = optimizerRef.current;
-    if (!optimizer || !isRunning) return;
-    
-    // Run one iteration
-    const newState = optimizer.step();
-    setState({
-      densities: new Float64Array(newState.densities), // Copy to trigger re-render
-      strainEnergy: new Float64Array(newState.strainEnergy),
-      compliance: newState.compliance,
-      volume: newState.volume,
-      iteration: newState.iteration,
-      converged: newState.converged,
-      change: newState.change,
-    });
-    
-    // Continue if not converged
-    if (!newState.converged && isRunning) {
-      animationRef.current = requestAnimationFrame(runOptimization);
-    } else if (newState.converged) {
-      setIsRunning(false);
-    }
-  }, [isRunning]);
-  
-  // Start/stop optimization
+  // Reset hasStarted when config changes
   useEffect(() => {
-    if (isRunning) {
-      animationRef.current = requestAnimationFrame(runOptimization);
-    } else if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-      animationRef.current = null;
-    }
-    
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, [isRunning, runOptimization]);
+    setHasStarted(false);
+    setViewMode('material');
+  }, [selectedPreset, selectedResolution, volumeFraction]);
   
   // Handlers
-  const handleStart = () => {
-    setIsRunning(true);
+  const handleStart = useCallback(() => {
     setHasStarted(true);
-  };
+    start();
+  }, [start]);
   
-  const handlePause = () => {
-    setIsRunning(false);
-  };
+  const handlePause = useCallback(() => {
+    pause();
+  }, [pause]);
   
-  const handleReset = () => {
-    setIsRunning(false);
-    initializeOptimizer();
-  };
+  const handleReset = useCallback(() => {
+    setHasStarted(false);
+    setViewMode('material');
+    reset();
+  }, [reset]);
   
-  const handlePresetChange = (presetId: string) => {
-    setIsRunning(false);
+  const handlePresetChange = useCallback((presetId: string) => {
+    if (isRunning) pause();
     setSelectedPreset(presetId);
-  };
+  }, [isRunning, pause]);
   
-  const handleResolutionChange = (resolutionId: string) => {
-    setIsRunning(false);
+  const handleResolutionChange = useCallback((resolutionId: string) => {
+    if (isRunning) pause();
     setSelectedResolution(resolutionId);
-  };
+  }, [isRunning, pause]);
   
-  const handleVolumeFractionChange = (value: number) => {
+  const handleVolumeFractionChange = useCallback((value: number) => {
     setVolumeFraction(value);
-    if (!isRunning) {
-      // Reinitialize with new volume fraction
-      setTimeout(() => {
-        initializeOptimizer();
-      }, 0);
-    }
-  };
+  }, []);
+  
+  // Determine what densities to show
+  // - Before start: show uniform density at volume fraction (preview)
+  // - After start: show actual optimization state
+  const displayDensities = hasStarted && state.densities.length > 0 ? state.densities : null;
+  const displayStrainEnergy = hasStarted && state.strainEnergy.length > 0 ? state.strainEnergy : null;
   
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Error display */}
+      {error && (
+        <div className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-red-800 dark:text-red-200 text-sm">
+          Error: {error}
+        </div>
+      )}
+      
       {/* Canvas with view toggle */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+      <div className="border border-border rounded-lg overflow-hidden bg-muted/50">
         {/* View toggle header - only shows after optimization starts */}
         {hasStarted && (
-          <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between px-3 py-2 bg-card border-b border-border">
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setViewMode('material')}
                 className={`px-3 py-1 text-sm rounded-md transition-colors ${
                   viewMode === 'material'
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted'
                 }`}
               >
                 Material
@@ -202,8 +152,8 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
                 onClick={() => setViewMode('stress')}
                 className={`px-3 py-1 text-sm rounded-md transition-colors ${
                   viewMode === 'stress'
-                    ? 'bg-gray-900 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted'
                 }`}
               >
                 Stress
@@ -213,15 +163,25 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
           </div>
         )}
         
-        <Canvas
-          densities={hasStarted ? state.densities : null}
-          strainEnergy={hasStarted ? state.strainEnergy : null}
-          nelx={nelx}
-          nely={nely}
-          viewMode={viewMode}
-          supports={bcData.supports}
-          loads={bcData.loads}
-        />
+        <div className="relative">
+          <Canvas
+            densities={displayDensities}
+            strainEnergy={displayStrainEnergy}
+            nelx={nelx}
+            nely={nely}
+            viewMode={viewMode}
+            supports={bcData.supports}
+            loads={bcData.loads}
+            initialVolumeFraction={volumeFraction}
+          />
+          
+          {/* Loading indicator when worker is initializing */}
+          {!isReady && !error && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+              <div className="text-sm text-muted-foreground">Initializing...</div>
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Progress Info */}
@@ -234,6 +194,14 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
         converged={state.converged}
         isRunning={isRunning}
       />
+      
+      {/* Convergence Graphs - only show after optimization has started */}
+      {hasStarted && (
+        <ConvergenceGraphs
+          history={history}
+          isRunning={isRunning}
+        />
+      )}
       
       {/* Controls */}
       <Controls
