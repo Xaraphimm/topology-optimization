@@ -35,7 +35,6 @@ export function ThemeToggle() {
   const initialized = useRef(false);
 
   // Initialize theme on mount - using useLayoutEffect to run synchronously before paint
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useLayoutEffect(() => {
     if (!initialized.current) {
       const stored = getStoredTheme();

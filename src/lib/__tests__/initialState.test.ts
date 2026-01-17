@@ -119,7 +119,7 @@ describe('Initial State Rendering', () => {
     for (const preset of PRESETS) {
       it(`should generate valid initial state for ${preset.name}`, () => {
         const { nelx, nely } = getMeshDimensions(preset, RESOLUTIONS[0]);
-        const { forces, fixedDofs, supports, loads } = preset.setup(nelx, nely);
+        const { forces, fixedDofs, supports } = preset.setup(nelx, nely);
         
         const optimizer = new SIMPOptimizer({ nelx, nely, volfrac: 0.5 });
         optimizer.setForces(forces);

@@ -1,12 +1,21 @@
 # Topology Optimization Visualizer
 
-[![Version](https://img.shields.io/badge/version-1.0.0--rc1-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Tests](https://img.shields.io/badge/tests-233%20passing-brightgreen.svg)](./src/lib/__tests__)
+[![Live Demo](https://img.shields.io/badge/demo-live-success.svg)](https://topology-optimization-yump.vercel.app)
 
 Interactive web-based topology optimization using SIMP (Solid Isotropic Material with Penalization). Watch material distribute itself in real-time to create optimal structures.
 
 **PHNX Foundry** | Follow [@Xaraphim](https://x.com/Xaraphim) on X for aerospace engineering deep-dives
+
+---
+
+## Status
+
+**Version:** 1.0.0 (Official Release)  
+**Status:** Production Ready  
+**Live Demo:** https://topology-optimization-yump.vercel.app
 
 ---
 
@@ -17,6 +26,7 @@ Interactive web-based topology optimization using SIMP (Solid Isotropic Material
 - **Side-by-side comparison** - Compare different configurations simultaneously
 - **Multiple load cases** - Cantilever, MBB beam, L-bracket, and more
 - **Live convergence tracking** - Watch compliance, volume, and density change in real-time
+- **Interactive SIMP explainer** - Material model visualization with penalization slider
 - **100% client-side** - No servers, no data collection, complete privacy
 
 ## Quick Start
@@ -67,28 +77,27 @@ topology-optimization/
 │       │   └── wasm-pkg/       # Compiled WASM module
 │       └── webgl/              # WebGL rendering engine
 ├── wasm-solver/                # Rust source for WASM solver
-├── out/                        # Static export (generated on build)
 └── DEPLOYMENT_NOTES.md         # Deployment instructions
 ```
 
 ## Building for Production
 
 ```bash
-npm run build    # Builds WASM + Next.js static export
-npm start        # Preview production build locally
+npm run build
+npm start
 ```
 
 The build process:
-1. Compiles Rust → WebAssembly via wasm-pack
+1. Uses pre-built WASM from `src/lib/optimizer/wasm-pkg`
 2. Bundles the Next.js application
-3. Generates static HTML/CSS/JS in `/out` directory
+3. Produces a production build for Vercel
 
 ### Requirements for Building
 
 - Node.js 20.x
-- Rust (latest stable)
-- wasm-pack (`cargo install wasm-pack`)
-- wasm32 target (`rustup target add wasm32-unknown-unknown`)
+- Rust (latest stable) for WASM development
+- wasm-pack (`cargo install wasm-pack`) if rebuilding WASM
+- wasm32 target (`rustup target add wasm32-unknown-unknown`) for WASM compilation
 
 ## Testing
 
@@ -100,12 +109,9 @@ npm run test:coverage # Generate coverage report
 
 ## Deployment
 
-This project is configured for **static export** and can be deployed to:
+**Production:** https://topology-optimization-yump.vercel.app
 
-- **GitHub Pages** (planned)
-- **Vercel** (automatic from repo)
-- **Netlify** (automatic from repo)
-- **Any static hosting**
+This project is deployed on **Vercel** with automatic deployments on every push to `main`.
 
 See [DEPLOYMENT_NOTES.md](./DEPLOYMENT_NOTES.md) for detailed deployment instructions.
 
@@ -115,9 +121,9 @@ The WASM solver provides significant performance improvements over the JavaScrip
 
 ```
 === Performance Benchmark (60x20 mesh, 2562 DOFs) ===
-JS Solver:   ~25ms, 240 iterations
+JS Solver:   ~24ms, 240 iterations
 WASM Solver: ~11ms, 240 iterations
-Speedup:     2.28x
+Speedup:     2.3x
 ```
 
 The application automatically falls back to JavaScript if WASM fails to load.
@@ -143,9 +149,10 @@ This release has been security audited:
 
 ## Version History
 
-| Version | Date | Notes |
-|---------|------|-------|
-| 1.0.0-rc1 | Jan 17, 2025 | Release candidate - PHNX Foundry branding, security hardening, deployment ready |
+| Version | Date | Status | Notes |
+|---------|------|--------|-------|
+| 1.0.0 | Jan 17, 2026 | **Production** | Official release with full features |
+| 1.0.0-rc1 | Jan 17, 2026 | Release Candidate | Pre-release testing |
 
 ## License
 

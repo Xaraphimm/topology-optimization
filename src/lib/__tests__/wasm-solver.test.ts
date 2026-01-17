@@ -9,7 +9,7 @@
  * 5. Performance comparison (WASM vs JS)
  */
 
-import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { 
   initWasm, 
   isWasmAvailable, 
@@ -20,8 +20,7 @@ import {
   JSSolver, 
   WASMSolver, 
   createSolver, 
-  createSolverSync,
-  getPreferredSolverType
+  createSolverSync
 } from '../optimizer/solver-interface';
 import { 
   assembleStiffnessMatrix, 

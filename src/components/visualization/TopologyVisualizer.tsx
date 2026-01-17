@@ -72,15 +72,20 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
   }, [selectedPreset, selectedResolution, volumeFraction]);
 
   // Update BC data for visualization (separate effect to avoid setState in useMemo)
-  useEffect(() => {
-    if (optimizerConfig) {
-      const currentPreset = getPreset(selectedPreset) || PRESETS[0];
-      const currentResolution = RESOLUTIONS.find(r => r.id === selectedResolution) || RESOLUTIONS[0];
-      const dims = getMeshDimensions(currentPreset, currentResolution);
-      const { supports, loads } = currentPreset.setup(dims.nelx, dims.nely);
-      setBcData({ supports, loads });
-    }
+  const computedBcData = useMemo(() => {
+    if (!optimizerConfig) return null;
+    const currentPreset = getPreset(selectedPreset) || PRESETS[0];
+    const currentResolution = RESOLUTIONS.find(r => r.id === selectedResolution) || RESOLUTIONS[0];
+    const dims = getMeshDimensions(currentPreset, currentResolution);
+    const { supports, loads } = currentPreset.setup(dims.nelx, dims.nely);
+    return { supports, loads };
   }, [optimizerConfig, selectedPreset, selectedResolution]);
+
+  useEffect(() => {
+    if (computedBcData) {
+      setBcData(computedBcData);
+    }
+  }, [computedBcData]);
   
   // Use the Web Worker-based optimizer hook
   const {
@@ -94,11 +99,14 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
     reset,
   } = useOptimizer(optimizerConfig);
   
-  // Reset hasStarted when config changes
+  const resetKey = useMemo(() => {
+    return `${selectedPreset}-${selectedResolution}-${volumeFraction}`;
+  }, [selectedPreset, selectedResolution, volumeFraction]);
+
   useEffect(() => {
     setHasStarted(false);
     setViewMode('material');
-  }, [selectedPreset, selectedResolution, volumeFraction]);
+  }, [resetKey]);
   
   // Handlers
   const handleStart = useCallback(() => {

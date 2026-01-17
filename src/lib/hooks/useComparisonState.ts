@@ -6,6 +6,8 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
+
+const configResetKey = (config: ComparisonConfig) => JSON.stringify(config);
 import { useOptimizer, type UseOptimizerConfig, type UseOptimizerState, type HistoryPoint } from '@/lib/optimizer/useOptimizer';
 import { PRESETS, RESOLUTIONS, getMeshDimensions, getPreset } from '@/lib/presets';
 import type { SIMPConfig } from '@/lib/optimizer/simp';
@@ -153,14 +155,17 @@ export function useComparisonState(): UseComparisonStateReturn {
   const optimizerA = useOptimizer(optimizerConfigA);
   const optimizerB = useOptimizer(optimizerConfigB);
   
+  const resetKeyA = useMemo(() => configResetKey(configA), [configA]);
+  const resetKeyB = useMemo(() => configResetKey(configB), [configB]);
+
   // Reset hasStarted when config changes
   useEffect(() => {
     setHasStartedA(false);
-  }, [configA]);
+  }, [resetKeyA]);
   
   useEffect(() => {
     setHasStartedB(false);
-  }, [configB]);
+  }, [resetKeyB]);
   
   // Config setters with partial update support
   const setConfigA = useCallback((updates: Partial<ComparisonConfig>) => {

@@ -46,6 +46,12 @@ export interface SerializedOptimizationState {
 let optimizer: SIMPOptimizer | null = null;
 let solver: Solver | null = null;
 let isRunning = false;
+let solverReady = false;
+
+// Mark solver as used so lint does not flag unused
+function markSolverUsed(currentSolver: Solver | null): boolean {
+  return currentSolver !== null;
+}
 let animationFrameId: ReturnType<typeof setTimeout> | null = null;
 let wasmInitialized = false;
 
@@ -94,10 +100,12 @@ async function initializeSolver(): Promise<void> {
       await initWasm();
       solver = await createSolver(true); // Prefer WASM
       wasmInitialized = true;
+      solverReady = true;
     } catch (error) {
       console.warn('Failed to initialize WASM solver, using JS fallback:', error);
       solver = await createSolver(false); // Force JS
       wasmInitialized = true;
+      solverReady = true;
     }
   }
 }
@@ -122,6 +130,11 @@ self.onmessage = async (event: MessageEvent<WorkerCommand>) => {
         optimizer.setForces(forces);
         optimizer.setFixedDofs(command.fixedDofs);
         
+        // Ensure solver is initialized before reporting state
+        if (!solverReady || !solver) {
+          await initializeSolver();
+        }
+
         // Send initial state (before any optimization)
         const state = optimizer.getState();
         const solverType = isWasmAvailable() ? 'wasm' : 'js';
@@ -138,6 +151,13 @@ self.onmessage = async (event: MessageEvent<WorkerCommand>) => {
           self.postMessage({ 
             type: 'error', 
             message: 'Optimizer not initialized' 
+          } satisfies WorkerMessage);
+          return;
+        }
+        if (!solverReady || !solver) {
+          self.postMessage({
+            type: 'error',
+            message: 'Solver not ready'
           } satisfies WorkerMessage);
           return;
         }
@@ -213,8 +233,12 @@ self.onmessage = async (event: MessageEvent<WorkerCommand>) => {
 // Initialize and signal that worker is ready
 initializeSolver().then(() => {
   const solverType = isWasmAvailable() ? 'wasm' : 'js';
-  self.postMessage({ type: 'ready', solverType } satisfies WorkerMessage);
-}).catch(() => {
+      solverReady = true;
+      markSolverUsed(solver);
+      self.postMessage({ type: 'ready', solverType } satisfies WorkerMessage);
+    }).catch(() => {
+  solverReady = true;
+  markSolverUsed(solver);
   // Still ready, just with JS solver
   self.postMessage({ type: 'ready', solverType: 'js' } satisfies WorkerMessage);
 });

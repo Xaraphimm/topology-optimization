@@ -213,22 +213,24 @@ export function useOptimizer(
   // Re-initialize when config changes
   useEffect(() => {
     if (!optimizerConfig) return;
-    
-    configRef.current = optimizerConfig;
+
+    const nextConfig = optimizerConfig;
+
+    configRef.current = nextConfig;
     setIsReady(false);
     setIsRunning(false);
     pendingStartRef.current = false;
     setState(INITIAL_STATE);
     clearHistory();
     setError(null);
-    
+
     const worker = workerRef.current;
     if (worker) {
       const cmd: WorkerCommand = {
         type: 'init',
-        config: optimizerConfig.config,
-        forces: Array.from(optimizerConfig.forces),
-        fixedDofs: optimizerConfig.fixedDofs,
+        config: nextConfig.config,
+        forces: Array.from(nextConfig.forces),
+        fixedDofs: nextConfig.fixedDofs,
       };
       worker.postMessage(cmd);
     }

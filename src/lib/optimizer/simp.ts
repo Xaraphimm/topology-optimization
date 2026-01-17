@@ -6,7 +6,7 @@
  */
 
 import { computeElementStiffness, getElementDOFs, getTotalDOFs, getNodeIndex } from './fem';
-import { assembleStiffnessMatrix, applyBoundaryConditions, conjugateGradient, CSRMatrix } from './solver';
+import { assembleStiffnessMatrix, applyBoundaryConditions, conjugateGradient } from './solver';
 import { prepareFilter, applySensitivityFilter, FilterData } from './filter';
 import type { OptimizationState, ProblemDefinition } from './types';
 
@@ -72,17 +72,17 @@ export class SIMPOptimizer {
     const { nelx, nely, volfrac, rmin, nu } = this.config;
     const nelem = nelx * nely;
     const nDofs = getTotalDOFs(nelx, nely);
-    
+
     // Initialize densities to volume fraction
     this.densities = new Float64Array(nelem).fill(volfrac);
     this.volume = volfrac;
-    
+
     // Prepare filter
     this.filterData = prepareFilter(nelx, nely, rmin);
-    
+
     // Precompute element stiffness matrix
     this.KE = computeElementStiffness(1.0, nu);
-    
+
     // Initialize arrays
     this.forces = new Float64Array(nDofs);
     this.fixedDofs = [];
@@ -97,7 +97,6 @@ export class SIMPOptimizer {
    */
   setupProblem(problem: ProblemDefinition): void {
     const { nelx, nely } = this.config;
-    const nDofs = getTotalDOFs(nelx, nely);
     
     // Reset forces
     this.forces.fill(0);
@@ -155,7 +154,6 @@ export class SIMPOptimizer {
    */
   reset(): void {
     const { volfrac } = this.config;
-    const nelem = this.config.nelx * this.config.nely;
     
     this.densities.fill(volfrac);
     this.iteration = 0;
@@ -175,10 +173,9 @@ export class SIMPOptimizer {
       return this.getState();
     }
     
-    const { nelx, nely, penal, Emin, E0, nu, volfrac, tolx } = this.config;
+    const { nelx, nely, penal, Emin, E0, nu, tolx } = this.config;
     const nelem = nelx * nely;
-    const nDofs = getTotalDOFs(nelx, nely);
-    
+
     // Store old densities for convergence check
     for (let i = 0; i < nelem; i++) {
       this.xold[i] = this.densities[i];
@@ -343,7 +340,7 @@ export class SIMPOptimizer {
       const { nelx, nely, rmin, volfrac, nu } = this.config;
       const nelem = nelx * nely;
       const nDofs = getTotalDOFs(nelx, nely);
-      
+
       this.densities = new Float64Array(nelem).fill(volfrac);
       this.filterData = prepareFilter(nelx, nely, rmin);
       this.KE = computeElementStiffness(1.0, nu);

@@ -1,6 +1,6 @@
 {
   "name": "topology-optimization",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Interactive topology optimization visualizer using SIMP - PHNX Foundry",
   "author": "Xaraphim | PHNX Foundry (https://x.com/Xaraphim)",

@@ -28,7 +28,6 @@ export interface FilterData {
  * @param rmin - Filter radius (in element lengths)
  */
 export function prepareFilter(nelx: number, nely: number, rmin: number): FilterData {
-  const nelem = nelx * nely;
   const neighborIndices: Int32Array[] = [];
   const neighborWeights: Float64Array[] = [];
   

@@ -79,23 +79,23 @@ async function loadWasmInBrowser(): Promise<InitOutput | null> {
  */
 async function loadWasmModule(): Promise<InitOutput | null> {
   try {
-    let module: InitOutput | null;
+    let wasmOutput: InitOutput | null;
     
     // Try Node.js-specific loading first if we're in a Node environment
     // This works in Node.js and vitest/jsdom environments
     if (canUseNodeFs()) {
       try {
-        module = await loadWasmInNode();
+        wasmOutput = await loadWasmInNode();
       } catch {
         // Fall back to browser-style loading (might work in some Node setups)
-        module = await loadWasmInBrowser();
+        wasmOutput = await loadWasmInBrowser();
       }
     } else {
       // Browser environment
-      module = await loadWasmInBrowser();
+      wasmOutput = await loadWasmInBrowser();
     }
     
-    if (!module) {
+    if (!wasmOutput) {
       throw new Error('Failed to load WASM module');
     }
     
@@ -110,7 +110,7 @@ async function loadWasmModule(): Promise<InitOutput | null> {
       throw new Error(`WASM test failed: expected ~${expectedSum}, got ${testResult}`);
     }
     
-    return module;
+    return wasmOutput;
   } catch (error) {
     console.warn('Failed to load WASM solver:', error);
     loadError = error instanceof Error ? error : new Error(String(error));

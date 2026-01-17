@@ -133,10 +133,13 @@ export function Canvas({
 
   useEffect(() => {
     if (!hasCheckedWebGL.current && preferWebGL) {
-      setUseWebGL(WebGLRenderer.isSupported());
+      const nextUseWebGL = WebGLRenderer.isSupported();
+      if (nextUseWebGL !== useWebGL) {
+        setUseWebGL(nextUseWebGL);
+      }
       hasCheckedWebGL.current = true;
     }
-  }, [preferWebGL]);
+  }, [preferWebGL, useWebGL]);
   
   // WebGL renderer hook (only active when useWebGL is true)
   const { isWebGLAvailable, error: webglError, render: webglRender } = useWebGLRenderer(

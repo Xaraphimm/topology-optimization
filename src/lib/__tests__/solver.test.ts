@@ -7,7 +7,6 @@ import {
   copyVec,
   conjugateGradient,
   assembleStiffnessMatrix,
-  applyBoundaryConditions,
   solveFEM,
 } from '../optimizer/solver';
 import { getTotalDOFs, getNodeIndex } from '../optimizer/fem';

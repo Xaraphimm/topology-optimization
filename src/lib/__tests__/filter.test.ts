@@ -5,7 +5,6 @@ import {
   applyDensityFilter,
   verifyFilterWeights,
   getNeighborCounts,
-  FilterData,
 } from '../optimizer/filter';
 
 describe('prepareFilter', () => {
