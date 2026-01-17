@@ -38,8 +38,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Build
-        run: npm run build
+      - name: Build WASM
+        run: |
+          cd wasm-solver
+          wasm-pack build --target web --out-dir ../src/lib/optimizer/wasm-pkg
+      
+      - name: Build Next.js
+        run: npx next build
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
