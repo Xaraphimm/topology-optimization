@@ -1,0 +1,15 @@
+{
+  "name": "topology-wasm-solver",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "topology_wasm_solver_bg.wasm",
+    "topology_wasm_solver.js",
+    "topology_wasm_solver.d.ts"
+  ],
+  "main": "topology_wasm_solver.js",
+  "types": "topology_wasm_solver.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
