@@ -126,16 +126,15 @@ export function Canvas({
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   
   const isDark = useDarkMode();
-  
-  // Check if WebGL should be used
+
+  // Check if WebGL should be used (only check once on mount)
   const [useWebGL, setUseWebGL] = useState(false);
-  
-  // Initialize WebGL availability check
+  const hasCheckedWebGL = useRef(false);
+
   useEffect(() => {
-    if (preferWebGL && WebGLRenderer.isSupported()) {
-      setUseWebGL(true);
-    } else {
-      setUseWebGL(false);
+    if (!hasCheckedWebGL.current && preferWebGL) {
+      setUseWebGL(WebGLRenderer.isSupported());
+      hasCheckedWebGL.current = true;
     }
   }, [preferWebGL]);
   
@@ -146,7 +145,8 @@ export function Canvas({
     useWebGL ? strainEnergy : null,
     nelx,
     nely,
-    viewMode
+    viewMode,
+    initialVolumeFraction
   );
   
   // Determine actual rendering mode

@@ -49,6 +49,9 @@ export class WebGLRenderer {
   private nelx = 0;
   private nely = 0;
   private maxStress = 1;
+  
+  // Flag to track if density texture has valid data
+  private hasDensityData = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -296,6 +299,14 @@ export class WebGLRenderer {
     }
 
     const gl = this.gl;
+    
+    // Validate input data size matches expected dimensions
+    const expectedSize = nelx * nely;
+    if (densities.length !== expectedSize) {
+      console.warn(`WebGL: Density array size (${densities.length}) doesn't match mesh dimensions (${nelx}x${nely}=${expectedSize})`);
+      return;
+    }
+    
     this.nelx = nelx;
     this.nely = nely;
 
@@ -320,6 +331,9 @@ export class WebGLRenderer {
       gl.UNSIGNED_BYTE,
       uint8Data
     );
+    
+    // Mark that we have valid density data
+    this.hasDensityData = true;
   }
 
   /**
@@ -327,6 +341,19 @@ export class WebGLRenderer {
    */
   updateStress(stress: Float64Array, maxStress: number): void {
     if (!this.gl || !this.stressTexture || this.contextLost) {
+      return;
+    }
+
+    // Safety check: ensure dimensions are set
+    if (this.nelx === 0 || this.nely === 0) {
+      console.warn('WebGL: Cannot update stress texture - mesh dimensions not set');
+      return;
+    }
+
+    // Validate input data size
+    const expectedSize = this.nelx * this.nely;
+    if (stress.length !== expectedSize) {
+      console.warn(`WebGL: Stress array size (${stress.length}) doesn't match mesh dimensions (${this.nelx}x${this.nely}=${expectedSize})`);
       return;
     }
 
@@ -357,10 +384,27 @@ export class WebGLRenderer {
   }
 
   /**
+   * Set mesh dimensions without updating texture data
+   * This allows the renderer to prepare for incoming data
+   */
+  setDimensions(nelx: number, nely: number): void {
+    this.nelx = nelx;
+    this.nely = nely;
+    // Reset the data flag when dimensions change - old data is invalid
+    this.hasDensityData = false;
+  }
+
+  /**
    * Render the current view
    */
   render(viewMode: ViewMode): void {
     if (!this.gl || !this.isInitialized || this.contextLost) {
+      return;
+    }
+
+    // Safety check: ensure mesh dimensions are set before rendering
+    if (this.nelx === 0 || this.nely === 0) {
+      // Dimensions not yet set - skip render, will be called again when updateDensities is called
       return;
     }
 

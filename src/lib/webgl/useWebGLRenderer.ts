@@ -10,6 +10,27 @@ interface UseWebGLRendererResult {
 }
 
 /**
+ * Create a uniform density array for preview rendering
+ * Used when no actual density data is available yet
+ */
+function createUniformDensities(nelx: number, nely: number, volumeFraction: number): Float64Array {
+  const size = nelx * nely;
+  const densities = new Float64Array(size);
+  densities.fill(volumeFraction);
+  return densities;
+}
+
+/**
+ * Check if a density array matches the expected dimensions
+ * This prevents rendering stale data from a previous resolution
+ */
+function isDensityArrayValid(densities: Float64Array | null, nelx: number, nely: number): boolean {
+  if (!densities) return false;
+  const expectedSize = nelx * nely;
+  return densities.length === expectedSize;
+}
+
+/**
  * React hook for managing the WebGL renderer lifecycle
  * 
  * @param canvasRef - Reference to the canvas element
@@ -18,6 +39,7 @@ interface UseWebGLRendererResult {
  * @param nelx - Number of elements in x direction
  * @param nely - Number of elements in y direction
  * @param viewMode - Current view mode ('material' or 'stress')
+ * @param initialVolumeFraction - Volume fraction for preview rendering when densities is null
  * @returns Object containing WebGL availability status, any error message, and manual render function
  */
 export function useWebGLRenderer(
@@ -26,7 +48,8 @@ export function useWebGLRenderer(
   stressEnergy: Float64Array | null,
   nelx: number,
   nely: number,
-  viewMode: ViewMode
+  viewMode: ViewMode,
+  initialVolumeFraction: number = 0.5
 ): UseWebGLRendererResult {
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const [isWebGLAvailable, setIsWebGLAvailable] = useState(false);
@@ -68,19 +91,39 @@ export function useWebGLRenderer(
   }, [canvasRef]);
 
   // Update density texture when data changes
+  // When densities is null OR wrong size, create a uniform preview texture
+  // This is critical for handling resolution switches correctly
   useEffect(() => {
     const renderer = rendererRef.current;
-    if (!renderer || !renderer.isReady() || !densities) {
+    if (!renderer || !renderer.isReady()) {
       return;
     }
 
-    renderer.updateDensities(densities, nelx, nely);
-  }, [densities, nelx, nely]);
+    // CRITICAL FIX: Validate density array size matches current dimensions
+    // This prevents rendering stale data from a previous resolution (e.g., 60x20 data on 120x40 canvas)
+    const hasValidDensities = isDensityArrayValid(densities, nelx, nely);
+    
+    // Use actual densities only if they match current dimensions, otherwise create uniform preview
+    const displayDensities = hasValidDensities 
+      ? densities! 
+      : createUniformDensities(nelx, nely, initialVolumeFraction);
+    
+    renderer.updateDensities(displayDensities, nelx, nely);
+    // Immediately render after updating densities to ensure display is current
+    renderer.render(viewMode);
+  }, [densities, nelx, nely, viewMode, initialVolumeFraction]);
 
   // Update stress texture when data changes
+  // Also validates that stress array matches current dimensions
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer || !renderer.isReady() || !stressEnergy) {
+      return;
+    }
+
+    // CRITICAL: Validate stress array size matches current dimensions
+    // Skip if array is from a previous resolution
+    if (!isDensityArrayValid(stressEnergy, nelx, nely)) {
       return;
     }
 
@@ -93,9 +136,12 @@ export function useWebGLRenderer(
     }
 
     renderer.updateStress(stressEnergy, maxStress);
-  }, [stressEnergy]);
+    // Immediately render after updating stress to ensure display is current
+    renderer.render(viewMode);
+  }, [stressEnergy, nelx, nely, viewMode]);
 
-  // Render when view mode changes or data updates
+  // Render when view mode changes
+  // Note: density/stress updates already trigger render in their respective effects
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer || !renderer.isReady()) {
@@ -103,7 +149,7 @@ export function useWebGLRenderer(
     }
 
     renderer.render(viewMode);
-  }, [viewMode, densities, stressEnergy]);
+  }, [viewMode]);
 
   // Manual render function for resize handling
   const render = useCallback(() => {

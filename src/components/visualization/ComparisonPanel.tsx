@@ -96,7 +96,6 @@ export function ComparisonPanel({
   onReset,
 }: ComparisonPanelProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('material');
-  const [graphsExpanded, setGraphsExpanded] = useState(false);
   
   // Get display densities
   const displayDensities = hasStarted && state.densities.length > 0 ? state.densities : null;
@@ -118,9 +117,9 @@ export function ComparisonPanel({
   }, [onConfigChange]);
   
   return (
-    <div className="flex flex-col h-full border border-border rounded-lg overflow-hidden bg-card">
+    <div className="flex flex-col h-full border border-border rounded-xl overflow-hidden bg-card shadow-sm dark:shadow-none dark:ring-1 dark:ring-white/5">
       {/* Panel Header */}
-      <div className="px-4 py-2 bg-muted/50 border-b border-border">
+      <div className="px-4 py-2.5 bg-muted/30 border-b border-border">
         <h3 className="text-sm font-semibold text-foreground">{label}</h3>
       </div>
       
@@ -135,24 +134,24 @@ export function ComparisonPanel({
       <div className="relative border-b border-border bg-muted/30">
         {/* View toggle - only shows after optimization starts */}
         {hasStarted && (
-          <div className="flex items-center justify-between px-3 py-1.5 bg-card border-b border-border">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between px-3 py-2 bg-muted/20 border-b border-border">
+            <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md">
               <button
                 onClick={() => setViewMode('material')}
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-1 text-xs font-medium rounded transition-all duration-200 ${
                   viewMode === 'material'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Material
               </button>
               <button
                 onClick={() => setViewMode('stress')}
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                className={`px-2 py-1 text-xs font-medium rounded transition-all duration-200 ${
                   viewMode === 'stress'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Stress

@@ -3,13 +3,12 @@
 import { Button } from '@/components/ui/button';
 import { ComparisonPanel } from './ComparisonPanel';
 import { useComparisonState } from '@/lib/hooks/useComparisonState';
-import { 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  X, 
-  ArrowRight, 
-  ArrowLeft 
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  X,
+  ArrowRight,
 } from 'lucide-react';
 
 interface ComparisonViewProps {
@@ -85,7 +84,7 @@ export function ComparisonView({ onExitComparison }: ComparisonViewProps) {
       </div>
       
       {/* Two panels side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ComparisonPanel
           label="Configuration A"
           config={configA}
@@ -122,7 +121,7 @@ export function ComparisonView({ onExitComparison }: ComparisonViewProps) {
       </div>
       
       {/* Footer with combined controls */}
-      <div className="flex flex-wrap items-center justify-center gap-3 p-4 bg-muted/30 border border-border rounded-lg">
+      <div className="flex flex-wrap items-center justify-center gap-3 p-4 bg-card border border-border rounded-xl shadow-sm dark:shadow-none dark:ring-1 dark:ring-white/5">
         {/* Combined Start/Pause/Reset */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-foreground mr-2">Both:</span>

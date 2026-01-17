@@ -89,6 +89,7 @@ export function useOptimizer(
   
   const workerRef = useRef<Worker | null>(null);
   const configRef = useRef<UseOptimizerConfig | null>(null);
+  const pendingStartRef = useRef(false);
   
   /**
    * Add a point to history, respecting max limit
@@ -158,6 +159,11 @@ export function useOptimizer(
           setIsReady(true);
           setError(null);
           setState(deserializeState(message.state));
+          if (pendingStartRef.current) {
+            pendingStartRef.current = false;
+            setIsRunning(true);
+            worker.postMessage({ type: 'start' } satisfies WorkerCommand);
+          }
           // Don't add to history - this is the initial state before optimization
           break;
           
@@ -170,10 +176,12 @@ export function useOptimizer(
           
         case 'paused':
           setIsRunning(false);
+          pendingStartRef.current = false;
           break;
           
         case 'converged': {
           setIsRunning(false);
+          pendingStartRef.current = false;
           const newState = deserializeState(message.state);
           setState(newState);
           addHistoryPoint(newState);
@@ -183,6 +191,7 @@ export function useOptimizer(
         case 'error':
           setError(message.message);
           setIsRunning(false);
+          pendingStartRef.current = false;
           break;
       }
     };
@@ -190,6 +199,7 @@ export function useOptimizer(
     worker.onerror = (event) => {
       setError(event.message || 'Worker error');
       setIsRunning(false);
+      pendingStartRef.current = false;
     };
     
     // Cleanup
@@ -207,6 +217,7 @@ export function useOptimizer(
     configRef.current = optimizerConfig;
     setIsReady(false);
     setIsRunning(false);
+    pendingStartRef.current = false;
     setState(INITIAL_STATE);
     clearHistory();
     setError(null);
@@ -226,10 +237,17 @@ export function useOptimizer(
   // Control functions
   const start = useCallback(() => {
     const worker = workerRef.current;
-    if (worker && isReady) {
-      setIsRunning(true);
-      worker.postMessage({ type: 'start' } satisfies WorkerCommand);
+    if (!worker) {
+      pendingStartRef.current = true;
+      return;
     }
+    if (isReady) {
+      setIsRunning(true);
+      pendingStartRef.current = false;
+      worker.postMessage({ type: 'start' } satisfies WorkerCommand);
+      return;
+    }
+    pendingStartRef.current = true;
   }, [isReady]);
   
   const pause = useCallback(() => {
@@ -243,6 +261,7 @@ export function useOptimizer(
     const worker = workerRef.current;
     if (worker) {
       setIsRunning(false);
+      pendingStartRef.current = false;
       clearHistory();
       worker.postMessage({ type: 'reset' } satisfies WorkerCommand);
     }

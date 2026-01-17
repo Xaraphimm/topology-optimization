@@ -189,7 +189,6 @@ export interface Resolution {
 
 export const RESOLUTIONS: Resolution[] = [
   { id: 'low', label: '60x20', baseNelx: 60 },
-  { id: 'medium', label: '90x30', baseNelx: 90 },
   { id: 'high', label: '120x40', baseNelx: 120 },
 ];
 

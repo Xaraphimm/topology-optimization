@@ -52,14 +52,10 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
     const currentPreset = getPreset(selectedPreset) || PRESETS[0];
     const currentResolution = RESOLUTIONS.find(r => r.id === selectedResolution) || RESOLUTIONS[0];
     const dims = getMeshDimensions(currentPreset, currentResolution);
-    
+
     // Set up problem
-    const { forces, fixedDofs, supports, loads } = currentPreset.setup(dims.nelx, dims.nely);
-    
-    // Update BC data for visualization (side effect, but needed for Canvas)
-    // This is safe because it's derived from the same inputs
-    setBcData({ supports, loads });
-    
+    const { forces, fixedDofs } = currentPreset.setup(dims.nelx, dims.nely);
+
     return {
       config: {
         nelx: dims.nelx,
@@ -74,6 +70,17 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
       fixedDofs,
     };
   }, [selectedPreset, selectedResolution, volumeFraction]);
+
+  // Update BC data for visualization (separate effect to avoid setState in useMemo)
+  useEffect(() => {
+    if (optimizerConfig) {
+      const currentPreset = getPreset(selectedPreset) || PRESETS[0];
+      const currentResolution = RESOLUTIONS.find(r => r.id === selectedResolution) || RESOLUTIONS[0];
+      const dims = getMeshDimensions(currentPreset, currentResolution);
+      const { supports, loads } = currentPreset.setup(dims.nelx, dims.nely);
+      setBcData({ supports, loads });
+    }
+  }, [optimizerConfig, selectedPreset, selectedResolution]);
   
   // Use the Web Worker-based optimizer hook
   const {
@@ -158,27 +165,27 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
       )}
       
       {/* Canvas with view toggle */}
-      <div className="border border-border rounded-lg overflow-hidden bg-muted/50">
+      <div className="border border-border rounded-xl overflow-hidden bg-card shadow-sm dark:shadow-none dark:ring-1 dark:ring-white/5">
         {/* View toggle header - only shows after optimization starts */}
         {hasStarted && (
-          <div className="flex items-center justify-between px-3 py-2 bg-card border-b border-border">
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border">
+            <div className="flex items-center gap-1 p-0.5 bg-muted/50 rounded-lg">
               <button
                 onClick={() => setViewMode('material')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
                   viewMode === 'material'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Material
               </button>
               <button
                 onClick={() => setViewMode('stress')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
                   viewMode === 'stress'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Stress
@@ -246,11 +253,11 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
       />
       
       {/* Compare button */}
-      <div className="flex justify-center pt-2">
+      <div className="flex justify-center pt-4">
         <Button 
           onClick={handleEnterComparison} 
           variant="outline" 
-          className="gap-2"
+          className="gap-2 shadow-sm hover:shadow-md transition-shadow"
         >
           <Columns2 className="w-4 h-4" />
           Compare Side-by-Side

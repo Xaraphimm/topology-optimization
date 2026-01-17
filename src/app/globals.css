@@ -175,3 +175,54 @@
 .dark .prose em {
   color: oklch(0.9 0 0);
 }
+
+/* Custom list styling */
+.custom-list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.custom-list li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.custom-list li::before {
+  content: '';
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  margin-top: 0.5rem;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  opacity: 0.5;
+}
+
+/* Subtle card styling for interactive elements */
+.interactive-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+}
+
+.dark .interactive-card {
+  box-shadow: none;
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+/* Smooth focus states */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Text selection */
+::selection {
+  background: oklch(0.7 0.15 250 / 0.3);
+}
+
+.dark ::selection {
+  background: oklch(0.6 0.2 250 / 0.4);
+}

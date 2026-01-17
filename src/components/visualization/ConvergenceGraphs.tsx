@@ -72,18 +72,18 @@ function ChartCard({
   currentValue?: string;
 }) {
   return (
-    <div className="bg-card border border-border rounded-lg p-3">
+    <div className="bg-muted/30 border border-border/50 rounded-lg p-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Icon className="w-4 h-4 text-muted-foreground" style={{ color }} />
           <span className="text-sm font-medium text-foreground">{title}</span>
         </div>
         {currentValue && (
-          <span className="text-sm font-mono text-muted-foreground">{currentValue}</span>
+          <span className="text-sm font-mono text-muted-foreground tabular-nums">{currentValue}</span>
         )}
       </div>
       
-      <div className="h-[120px]">
+      <div className="h-[160px]">
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 5, right: 5, bottom: 5, left: 0 }}>
@@ -178,11 +178,11 @@ export function ConvergenceGraphs({
   };
   
   return (
-    <div className={`border border-border rounded-lg overflow-hidden bg-muted/30 ${className}`}>
+    <div className={`border border-border rounded-xl overflow-hidden bg-card shadow-sm dark:shadow-none dark:ring-1 dark:ring-white/5 ${className}`}>
       {/* Header - always visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-card hover:bg-muted/50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors"
       >
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-muted-foreground" />
@@ -210,10 +210,10 @@ export function ConvergenceGraphs({
       {/* Charts - collapsible */}
       <div
         className={`transition-all duration-300 ease-in-out overflow-hidden ${
-          isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+          isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="p-4 pt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="p-4 pt-2 grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Compliance Chart */}
           <ChartCard
             title="Compliance"
