@@ -3,10 +3,15 @@
  * 
  * Offloads expensive FE analysis computations to a background thread
  * to keep the UI responsive during optimization.
+ * 
+ * Supports both JavaScript and WebAssembly PCG solvers, with automatic
+ * fallback to JS if WASM is unavailable.
  */
 
 import { SIMPOptimizer, type SIMPConfig } from './simp';
 import type { OptimizationState } from './types';
+import { initWasm, isWasmAvailable } from './wasm-loader';
+import { createSolver, type Solver } from './solver-interface';
 
 // Message types from main thread to worker
 export type WorkerCommand = 
@@ -19,8 +24,8 @@ export type WorkerCommand =
 
 // Message types from worker to main thread
 export type WorkerMessage =
-  | { type: 'ready' }
-  | { type: 'initialized'; state: SerializedOptimizationState }
+  | { type: 'ready'; solverType: 'wasm' | 'js' }
+  | { type: 'initialized'; state: SerializedOptimizationState; solverType: 'wasm' | 'js' }
   | { type: 'state'; state: SerializedOptimizationState }
   | { type: 'paused' }
   | { type: 'converged'; state: SerializedOptimizationState }
@@ -39,8 +44,10 @@ export interface SerializedOptimizationState {
 
 // Worker state
 let optimizer: SIMPOptimizer | null = null;
+let solver: Solver | null = null;
 let isRunning = false;
 let animationFrameId: ReturnType<typeof setTimeout> | null = null;
+let wasmInitialized = false;
 
 /**
  * Convert OptimizationState to serializable format
@@ -79,12 +86,32 @@ function runOptimizationLoop() {
 }
 
 /**
+ * Initialize WASM and solver on worker startup
+ */
+async function initializeSolver(): Promise<void> {
+  if (!wasmInitialized) {
+    try {
+      await initWasm();
+      solver = await createSolver(true); // Prefer WASM
+      wasmInitialized = true;
+    } catch (error) {
+      console.warn('Failed to initialize WASM solver, using JS fallback:', error);
+      solver = await createSolver(false); // Force JS
+      wasmInitialized = true;
+    }
+  }
+}
+
+/**
  * Handle messages from main thread
  */
-self.onmessage = (event: MessageEvent<WorkerCommand>) => {
+self.onmessage = async (event: MessageEvent<WorkerCommand>) => {
   const command = event.data;
   
   try {
+    // Ensure solver is initialized
+    await initializeSolver();
+    
     switch (command.type) {
       case 'init': {
         // Create new optimizer instance
@@ -97,9 +124,11 @@ self.onmessage = (event: MessageEvent<WorkerCommand>) => {
         
         // Send initial state (before any optimization)
         const state = optimizer.getState();
+        const solverType = isWasmAvailable() ? 'wasm' : 'js';
         self.postMessage({ 
           type: 'initialized', 
-          state: serializeState(state) 
+          state: serializeState(state),
+          solverType
         } satisfies WorkerMessage);
         break;
       }
@@ -136,9 +165,11 @@ self.onmessage = (event: MessageEvent<WorkerCommand>) => {
         if (optimizer) {
           optimizer.reset();
           const state = optimizer.getState();
+          const solverType = isWasmAvailable() ? 'wasm' : 'js';
           self.postMessage({ 
             type: 'initialized', 
-            state: serializeState(state) 
+            state: serializeState(state),
+            solverType
           } satisfies WorkerMessage);
         }
         break;
@@ -179,5 +210,11 @@ self.onmessage = (event: MessageEvent<WorkerCommand>) => {
   }
 };
 
-// Signal that worker is ready
-self.postMessage({ type: 'ready' } satisfies WorkerMessage);
+// Initialize and signal that worker is ready
+initializeSolver().then(() => {
+  const solverType = isWasmAvailable() ? 'wasm' : 'js';
+  self.postMessage({ type: 'ready', solverType } satisfies WorkerMessage);
+}).catch(() => {
+  // Still ready, just with JS solver
+  self.postMessage({ type: 'ready', solverType: 'js' } satisfies WorkerMessage);
+});
