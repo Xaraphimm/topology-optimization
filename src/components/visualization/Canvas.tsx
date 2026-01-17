@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { WebGLRenderer, useWebGLRenderer } from '@/lib/webgl';
 
 interface Support {
   x: number;
@@ -28,6 +29,8 @@ interface CanvasProps {
   className?: string;
   /** Initial volume fraction for rendering preview mesh when densities is null */
   initialVolumeFraction?: number;
+  /** Prefer WebGL rendering when available (default: true) */
+  preferWebGL?: boolean;
 }
 
 /**
@@ -97,6 +100,10 @@ function stressToColor(normalizedValue: number): string {
 /**
  * Canvas component for rendering topology optimization results
  * 
+ * Supports two rendering modes:
+ * - WebGL: GPU-accelerated rendering for large meshes (default when available)
+ * - Canvas2D: Fallback for browsers without WebGL support
+ * 
  * Supports two view modes:
  * - material: Grayscale density view (white = void, black = solid)
  * - stress: Blue-white-red heatmap (blue = low stress, red = high stress)
@@ -111,12 +118,45 @@ export function Canvas({
   loads = [],
   className = '',
   initialVolumeFraction = 0.5,
+  preferWebGL = true,
 }: CanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Main canvas for WebGL or Canvas2D mesh rendering
+  const mainCanvasRef = useRef<HTMLCanvasElement>(null);
+  // Overlay canvas for boundary conditions (always Canvas2D)
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+  
   const isDark = useDarkMode();
   
-  const render = useCallback(() => {
-    const canvas = canvasRef.current;
+  // Check if WebGL should be used
+  const [useWebGL, setUseWebGL] = useState(false);
+  
+  // Initialize WebGL availability check
+  useEffect(() => {
+    if (preferWebGL && WebGLRenderer.isSupported()) {
+      setUseWebGL(true);
+    } else {
+      setUseWebGL(false);
+    }
+  }, [preferWebGL]);
+  
+  // WebGL renderer hook (only active when useWebGL is true)
+  const { isWebGLAvailable, error: webglError, render: webglRender } = useWebGLRenderer(
+    mainCanvasRef,
+    useWebGL ? densities : null, // Only pass data if using WebGL
+    useWebGL ? strainEnergy : null,
+    nelx,
+    nely,
+    viewMode
+  );
+  
+  // Determine actual rendering mode
+  const actuallyUsingWebGL = useWebGL && isWebGLAvailable && !webglError;
+  
+  // Canvas2D rendering for mesh (fallback)
+  const renderCanvas2D = useCallback(() => {
+    if (actuallyUsingWebGL) return; // Skip if using WebGL
+    
+    const canvas = mainCanvasRef.current;
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
@@ -187,77 +227,117 @@ export function Canvas({
         ctx.fillRect(canvasX, canvasY, elemWidth + 0.5, elemHeight + 0.5);
       }
     }
+  }, [densities, strainEnergy, nelx, nely, viewMode, isDark, initialVolumeFraction, actuallyUsingWebGL]);
+  
+  // Render boundary conditions overlay (always Canvas2D)
+  const renderOverlay = useCallback(() => {
+    const canvas = overlayCanvasRef.current;
+    if (!canvas) return;
     
-    // Always draw boundary conditions (supports and loads) - even in preview mode
-    // This gives users visual context about the problem setup before starting
-    {
-      // Draw supports
-      const nodeWidth = displayWidth / nelx;
-      const nodeHeight = displayHeight / nely;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Get display dimensions
+    const displayWidth = canvas.clientWidth;
+    const displayHeight = canvas.clientHeight;
+    
+    // Set actual canvas size (for sharp rendering)
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+    ctx.scale(dpr, dpr);
+    
+    // Clear canvas (transparent)
+    ctx.clearRect(0, 0, displayWidth, displayHeight);
+    
+    // Draw supports and loads
+    const nodeWidth = displayWidth / nelx;
+    const nodeHeight = displayHeight / nely;
+    
+    for (const support of supports) {
+      const canvasX = support.x * nodeWidth;
+      const canvasY = (nely - support.y) * nodeHeight; // Flip Y
       
-      for (const support of supports) {
-        const canvasX = support.x * nodeWidth;
-        const canvasY = (nely - support.y) * nodeHeight; // Flip Y
-        
-        ctx.save();
-        ctx.translate(canvasX, canvasY);
-        
-        if (support.type === 'pin') {
-          // Draw triangle for pin support
-          drawPinSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8);
-        } else if (support.type === 'roller-x') {
-          // Roller that allows Y movement (fixes X)
-          drawRollerSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8, 'vertical');
-        } else if (support.type === 'roller-y') {
-          // Roller that allows X movement (fixes Y)
-          drawRollerSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8, 'horizontal');
-        }
-        
-        ctx.restore();
+      ctx.save();
+      ctx.translate(canvasX, canvasY);
+      
+      if (support.type === 'pin') {
+        // Draw triangle for pin support
+        drawPinSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8);
+      } else if (support.type === 'roller-x') {
+        // Roller that allows Y movement (fixes X)
+        drawRollerSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8, 'vertical');
+      } else if (support.type === 'roller-y') {
+        // Roller that allows X movement (fixes Y)
+        drawRollerSupport(ctx, Math.min(nodeWidth, nodeHeight) * 0.8, 'horizontal');
       }
       
-      // Draw loads
-      for (const load of loads) {
-        const canvasX = load.x * nodeWidth;
-        const canvasY = (nely - load.y) * nodeHeight; // Flip Y
-        
-        ctx.save();
-        ctx.translate(canvasX, canvasY);
-        
-        // Arrow pointing in direction of load
-        const arrowLength = Math.min(nodeWidth, nodeHeight) * 1.5;
-        drawArrow(ctx, 0, 0, load.dx * arrowLength, -load.dy * arrowLength); // Flip dy for canvas
-        
-        ctx.restore();
-      }
+      ctx.restore();
     }
     
-  }, [densities, strainEnergy, nelx, nely, viewMode, supports, loads, isDark, initialVolumeFraction]);
+    // Draw loads
+    for (const load of loads) {
+      const canvasX = load.x * nodeWidth;
+      const canvasY = (nely - load.y) * nodeHeight; // Flip Y
+      
+      ctx.save();
+      ctx.translate(canvasX, canvasY);
+      
+      // Arrow pointing in direction of load
+      const arrowLength = Math.min(nodeWidth, nodeHeight) * 1.5;
+      drawArrow(ctx, 0, 0, load.dx * arrowLength, -load.dy * arrowLength); // Flip dy for canvas
+      
+      ctx.restore();
+    }
+  }, [nelx, nely, supports, loads]);
   
   // Render on data change
   useEffect(() => {
-    render();
-  }, [render]);
+    if (actuallyUsingWebGL) {
+      // WebGL rendering is handled by the hook
+      webglRender();
+    } else {
+      renderCanvas2D();
+    }
+    renderOverlay();
+  }, [actuallyUsingWebGL, webglRender, renderCanvas2D, renderOverlay]);
   
   // Re-render on resize
   useEffect(() => {
     const handleResize = () => {
-      requestAnimationFrame(render);
+      requestAnimationFrame(() => {
+        if (actuallyUsingWebGL) {
+          webglRender();
+        } else {
+          renderCanvas2D();
+        }
+        renderOverlay();
+      });
     };
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [render]);
+  }, [actuallyUsingWebGL, webglRender, renderCanvas2D, renderOverlay]);
   
   return (
-    <canvas
-      ref={canvasRef}
-      className={`w-full ${className}`}
+    <div 
+      className={`relative w-full ${className}`}
       style={{ 
         aspectRatio: `${nelx} / ${nely}`,
         maxHeight: '400px',
       }}
-    />
+    >
+      {/* Main canvas for mesh rendering (WebGL or Canvas2D) */}
+      <canvas
+        ref={mainCanvasRef}
+        className="absolute inset-0 w-full h-full"
+      />
+      {/* Overlay canvas for boundary conditions (always Canvas2D) */}
+      <canvas
+        ref={overlayCanvasRef}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+      />
+    </div>
   );
 }
 
