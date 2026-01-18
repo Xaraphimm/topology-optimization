@@ -85,64 +85,84 @@ describe('WebGL Shaders', () => {
 });
 
 describe('stressToRGB', () => {
-  it('should return blue at t=0', () => {
+  // Note: stressToRGB now uses gamma correction (1/2.2) and smoothstep interpolation
+  // for perceptually uniform color output matching the WebGL shader
+  
+  it('should return gamma-corrected blue at t=0', () => {
     const [r, g, b] = stressToRGB(0);
-    // Blue: RGB(59, 130, 246) approximately
-    expect(r).toBe(59);
-    expect(g).toBe(130);
-    expect(b).toBe(246);
+    // Blue [0.231, 0.510, 0.965] with gamma correction produces ~[131, 191, 250]
+    // Allow small tolerance for floating point variations
+    expect(r).toBeGreaterThanOrEqual(128);
+    expect(r).toBeLessThanOrEqual(135);
+    expect(g).toBeGreaterThanOrEqual(188);
+    expect(g).toBeLessThanOrEqual(195);
+    expect(b).toBeGreaterThanOrEqual(247);
+    expect(b).toBeLessThanOrEqual(253);
   });
 
   it('should return white at t=0.5', () => {
     const [r, g, b] = stressToRGB(0.5);
+    // White remains white after gamma correction
     expect(r).toBe(255);
     expect(g).toBe(255);
     expect(b).toBe(255);
   });
 
-  it('should return red at t=1', () => {
+  it('should return gamma-corrected red at t=1', () => {
     const [r, g, b] = stressToRGB(1);
-    // Red: RGB(255, 0, 38) approximately
-    expect(r).toBe(255);
-    expect(g).toBe(0);
-    expect(b).toBe(38);
+    // Red [0.937, 0.267, 0.267] with gamma correction produces ~[248, 138, 138]
+    expect(r).toBeGreaterThanOrEqual(245);
+    expect(r).toBeLessThanOrEqual(250);
+    expect(g).toBeGreaterThanOrEqual(135);
+    expect(g).toBeLessThanOrEqual(142);
+    expect(b).toBeGreaterThanOrEqual(135);
+    expect(b).toBeLessThanOrEqual(142);
   });
 
   it('should interpolate between blue and white', () => {
     const [r, g, b] = stressToRGB(0.25);
-    // Should be between blue and white
-    expect(r).toBeGreaterThan(59);
+    const [blueR] = stressToRGB(0);
+    // Should be between blue and white (with smoothstep interpolation)
+    expect(r).toBeGreaterThan(blueR);
     expect(r).toBeLessThan(255);
-    expect(g).toBeGreaterThan(130);
+    expect(g).toBeGreaterThan(190);
     expect(g).toBeLessThan(255);
-    expect(b).toBeGreaterThan(246);
+    // Blue component should be high
+    expect(b).toBeGreaterThanOrEqual(250);
     expect(b).toBeLessThanOrEqual(255);
   });
 
   it('should interpolate between white and red', () => {
     const [r, g, b] = stressToRGB(0.75);
-    // Should be between white and red
-    expect(r).toBe(255);
-    expect(g).toBeGreaterThan(0);
+    const [redR, redG] = stressToRGB(1);
+    // Should be between white and red (with smoothstep interpolation)
+    // R should be high (between white and red)
+    expect(r).toBeGreaterThanOrEqual(248);
+    expect(r).toBeLessThanOrEqual(255);
+    // G should be between white (255) and red (~138)
+    expect(g).toBeGreaterThan(redG);
     expect(g).toBeLessThan(255);
-    expect(b).toBeGreaterThan(38);
+    // B should be between white (255) and red (~138)
+    expect(b).toBeGreaterThan(redG);
     expect(b).toBeLessThan(255);
   });
 
   it('should clamp values below 0', () => {
     const [r, g, b] = stressToRGB(-0.5);
+    const [blueR, blueG, blueB] = stressToRGB(0);
     // Should be same as t=0 (blue)
-    expect(r).toBe(59);
-    expect(g).toBe(130);
-    expect(b).toBe(246);
+    expect(r).toBe(blueR);
+    expect(g).toBe(blueG);
+    expect(b).toBe(blueB);
   });
 
   it('should clamp values above 1', () => {
     const [r, g, b] = stressToRGB(1.5);
+    const [redR, redG, redB] = stressToRGB(1);
     // Should be same as t=1 (red)
-    expect(r).toBe(255);
-    expect(g).toBe(0);
-    expect(b).toBe(38);
+    expect(r).toBe(redR);
+    expect(g).toBe(redG);
+    expect(b).toBe(redB);
   });
 
   it('should return integer RGB values', () => {

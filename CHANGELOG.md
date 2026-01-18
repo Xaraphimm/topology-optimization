@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-01-17
+
+### Added - Visual Engine Overhaul
+- **Smooth bilinear texture filtering** - WebGL LINEAR filtering for smooth density gradients
+- **Gamma correction** - Perceptually uniform brightness using standard 2.2 gamma
+- **Contrast enhancement** - Smoothstep-based enhancement for clearer solid/void boundaries
+- **Improved stress colormap** - Smoothstep color interpolation with Tailwind colors
+- **Canvas2D parity** - Fallback renderer now matches WebGL visual quality
+
+### Added - High-Resolution Export System
+- **PNG export** - 4x, 8x, 16x resolution with bicubic upsampling
+- **SVG vector export** - Marching Squares contour extraction for infinite scalability
+- **Catmull-Rom spline smoothing** - Publication-quality curve smoothing for SVG
+- **Export UI** - Integrated dropdown in visualization header
+- **Upsampling library** - Bilinear, bicubic, and nearest-neighbor interpolation
+
+### Added - New Tests
+- 54 new tests (233 -> 287 total)
+- Rendering enhancement test suite (18 tests)
+- Export functionality test suite (36 tests)
+
+### Technical
+- New `src/lib/export/` module with upsampling, image export, and SVG export
+- Enhanced shaders with `precision highp float` for better quality
+- Configurable `RenderingOptions` for WebGL renderer
+- All 287 tests passing
+
+---
+
 ## [1.0.0] - 2026-01-17
 
 ### Added

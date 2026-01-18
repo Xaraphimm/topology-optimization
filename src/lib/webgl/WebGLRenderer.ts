@@ -15,6 +15,18 @@ import {
 
 export type ViewMode = 'material' | 'stress';
 
+/**
+ * Rendering options for visual quality control
+ */
+export interface RenderingOptions {
+  /** Use smooth bilinear interpolation (true) or crisp nearest-neighbor (false) */
+  smoothRendering: boolean;
+}
+
+const DEFAULT_RENDERING_OPTIONS: RenderingOptions = {
+  smoothRendering: true, // Default to smooth for better visual quality
+};
+
 interface ProgramInfo {
   program: WebGLProgram;
   attribLocations: {
@@ -52,9 +64,13 @@ export class WebGLRenderer {
   
   // Flag to track if density texture has valid data
   private hasDensityData = false;
+  
+  // Rendering options for visual quality
+  private renderingOptions: RenderingOptions;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, options: Partial<RenderingOptions> = {}) {
     this.canvas = canvas;
+    this.renderingOptions = { ...DEFAULT_RENDERING_OPTIONS, ...options };
   }
 
   /**
@@ -260,9 +276,15 @@ export class WebGLRenderer {
 
   /**
    * Set up textures for density and stress data
+   * Uses LINEAR filtering for smooth rendering or NEAREST for crisp pixels
    */
   private setupTextures(): boolean {
     const gl = this.gl!;
+    
+    // Select filtering mode based on rendering options
+    // LINEAR: Smooth bilinear interpolation between texels - produces smooth gradients
+    // NEAREST: Crisp pixel-perfect rendering - shows individual elements clearly
+    const filterMode = this.renderingOptions.smoothRendering ? gl.LINEAR : gl.NEAREST;
 
     // Create density texture
     this.densityTexture = gl.createTexture();
@@ -270,11 +292,10 @@ export class WebGLRenderer {
       return false;
     }
     gl.bindTexture(gl.TEXTURE_2D, this.densityTexture);
-    // Set texture parameters for crisp pixel rendering
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filterMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filterMode);
 
     // Create stress texture
     this.stressTexture = gl.createTexture();
@@ -284,8 +305,8 @@ export class WebGLRenderer {
     gl.bindTexture(gl.TEXTURE_2D, this.stressTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filterMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filterMode);
 
     return true;
   }
@@ -485,6 +506,45 @@ export class WebGLRenderer {
 
     // Draw the quad as a triangle strip
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  /**
+   * Update rendering options (e.g., toggle smooth rendering)
+   * Note: This reinitializes textures to apply new filtering mode
+   */
+  setRenderingOptions(options: Partial<RenderingOptions>): void {
+    const newOptions = { ...this.renderingOptions, ...options };
+    
+    // Only reinitialize if filtering mode changed
+    if (newOptions.smoothRendering !== this.renderingOptions.smoothRendering) {
+      this.renderingOptions = newOptions;
+      
+      // Reinitialize textures with new filtering mode
+      if (this.gl && this.isInitialized) {
+        // Delete old textures
+        if (this.densityTexture) {
+          this.gl.deleteTexture(this.densityTexture);
+          this.densityTexture = null;
+        }
+        if (this.stressTexture) {
+          this.gl.deleteTexture(this.stressTexture);
+          this.stressTexture = null;
+        }
+        
+        // Recreate textures with new filtering
+        this.setupTextures();
+        this.hasDensityData = false;
+      }
+    } else {
+      this.renderingOptions = newOptions;
+    }
+  }
+
+  /**
+   * Get current rendering options
+   */
+  getRenderingOptions(): RenderingOptions {
+    return { ...this.renderingOptions };
   }
 
   /**

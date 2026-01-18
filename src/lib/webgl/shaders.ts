@@ -20,51 +20,118 @@ void main() {
 /**
  * Fragment shader for material/density view
  * Renders grayscale: 0 = white (void), 1 = black (solid)
+ * 
+ * Enhanced with:
+ * - Gamma correction for perceptually uniform brightness
+ * - Contrast enhancement for clearer solid/void distinction
+ * - Smooth material boundary transitions
  */
 export const materialFragmentShaderSource = `
-precision mediump float;
+precision highp float;
 varying vec2 v_texCoord;
 uniform sampler2D u_densityTexture;
 uniform int u_nelx;
 uniform int u_nely;
 
+// Gamma correction for perceptually uniform brightness
+// Human vision perceives brightness non-linearly, gamma correction compensates
+const float GAMMA = 2.2;
+const float INV_GAMMA = 1.0 / 2.2;
+
+// Contrast enhancement parameters
+// These values create a sharper visual distinction between solid and void regions
+const float CONTRAST_CENTER = 0.5;  // Material boundary threshold
+const float CONTRAST_LOW = 0.08;    // Lower bound for smoothstep
+const float CONTRAST_HIGH = 0.92;   // Upper bound for smoothstep
+
 void main() {
   // Sample density at this fragment's position
   float density = texture2D(u_densityTexture, v_texCoord).r;
-  // Grayscale: 0 = white (void), 1 = black (solid)
-  float gray = 1.0 - density;
-  gl_FragColor = vec4(gray, gray, gray, 1.0);
+  
+  // Apply gamma correction for perceptually uniform brightness
+  // This makes mid-gray values appear more natural
+  float gammaCorrected = pow(density, INV_GAMMA);
+  
+  // Apply contrast enhancement using smoothstep
+  // This creates sharper visual boundaries while maintaining smooth gradients
+  // Densities below CONTRAST_LOW map toward 0, above CONTRAST_HIGH toward 1
+  float enhanced = smoothstep(CONTRAST_LOW, CONTRAST_HIGH, gammaCorrected);
+  
+  // Convert to grayscale: 0 (void) = white, 1 (solid) = black
+  float gray = 1.0 - enhanced;
+  
+  // Apply inverse gamma for final output (most displays expect gamma-encoded values)
+  float finalGray = pow(gray, INV_GAMMA);
+  
+  gl_FragColor = vec4(finalGray, finalGray, finalGray, 1.0);
 }
 `;
 
 /**
  * Fragment shader for stress/strain energy view
  * Renders blue-white-red colormap based on stress intensity
+ * 
+ * Enhanced with:
+ * - Improved color interpolation using smoothstep
+ * - Better perceptual uniformity
+ * - Gamma-corrected output
  */
 export const stressFragmentShaderSource = `
-precision mediump float;
+precision highp float;
 varying vec2 v_texCoord;
 uniform sampler2D u_stressTexture;
 uniform float u_maxStress;
 
-// Blue-white-red colormap
+// Gamma for perceptual correction
+const float GAMMA = 2.2;
+const float INV_GAMMA = 1.0 / 2.2;
+
+// Blue-white-red colormap with improved interpolation
 // t=0: blue (low stress), t=0.5: white, t=1: red (high stress)
+// Uses smoothstep for more natural color transitions
 vec3 stressColor(float t) {
-  if (t < 0.5) {
-    float s = t * 2.0;
-    // Blue RGB: (59, 130, 246) / 255 = (0.231, 0.510, 0.965)
-    return mix(vec3(0.231, 0.510, 0.965), vec3(1.0, 1.0, 1.0), s);
+  // Clamp input to valid range
+  float tc = clamp(t, 0.0, 1.0);
+  
+  // Define colors in linear space for accurate interpolation
+  // Blue: Tailwind blue-500 (59, 130, 246)
+  vec3 blue = vec3(0.231, 0.510, 0.965);
+  // White
+  vec3 white = vec3(1.0, 1.0, 1.0);
+  // Red: Vibrant red (239, 68, 68) - Tailwind red-500
+  vec3 red = vec3(0.937, 0.267, 0.267);
+  
+  vec3 color;
+  if (tc < 0.5) {
+    // Blue to white transition
+    float s = tc * 2.0;
+    // Use smoothstep for smoother gradient near boundaries
+    float smooth_s = smoothstep(0.0, 1.0, s);
+    color = mix(blue, white, smooth_s);
   } else {
-    float s = (t - 0.5) * 2.0;
-    // Red RGB: (255, 0, 38) / 255 = (1.0, 0.0, 0.149)
-    return mix(vec3(1.0, 1.0, 1.0), vec3(1.0, 0.0, 0.149), s);
+    // White to red transition
+    float s = (tc - 0.5) * 2.0;
+    float smooth_s = smoothstep(0.0, 1.0, s);
+    color = mix(white, red, smooth_s);
   }
+  
+  return color;
 }
 
 void main() {
   float stress = texture2D(u_stressTexture, v_texCoord).r;
-  float normalized = sqrt(stress / u_maxStress); // sqrt for better color spread
-  gl_FragColor = vec4(stressColor(normalized), 1.0);
+  
+  // Apply sqrt for better visual distribution of stress values
+  // This spreads out the lower stress values which are often more numerous
+  float normalized = sqrt(stress / u_maxStress);
+  
+  // Get color from colormap
+  vec3 color = stressColor(normalized);
+  
+  // Apply gamma correction for display (most monitors expect gamma-encoded values)
+  vec3 gammaCorrected = pow(color, vec3(INV_GAMMA));
+  
+  gl_FragColor = vec4(gammaCorrected, 1.0);
 }
 `;
 
@@ -153,27 +220,51 @@ export function validateShaderSource(source: string): string[] {
 /**
  * Convert normalized stress value to RGB color (matching shader logic)
  * Used for testing and fallback rendering
+ * 
+ * Enhanced with smoothstep interpolation and gamma correction to match WebGL shader
  */
 export function stressToRGB(t: number): [number, number, number] {
   const clamped = Math.max(0, Math.min(1, t));
   
+  // Smoothstep function for smoother transitions
+  const smoothstep = (x: number): number => x * x * (3 - 2 * x);
+  
+  // Define colors (matching shader)
+  const blue = [0.231, 0.510, 0.965];
+  const white = [1.0, 1.0, 1.0];
+  const red = [0.937, 0.267, 0.267];
+  
+  let color: number[];
+  
   if (clamped < 0.5) {
     const s = clamped * 2;
+    const smooth_s = smoothstep(s);
     // Blue to white
-    return [
-      Math.round((0.231 + s * (1.0 - 0.231)) * 255),
-      Math.round((0.510 + s * (1.0 - 0.510)) * 255),
-      Math.round((0.965 + s * (1.0 - 0.965)) * 255),
+    color = [
+      blue[0] + smooth_s * (white[0] - blue[0]),
+      blue[1] + smooth_s * (white[1] - blue[1]),
+      blue[2] + smooth_s * (white[2] - blue[2]),
     ];
   } else {
     const s = (clamped - 0.5) * 2;
+    const smooth_s = smoothstep(s);
     // White to red
-    return [
-      255,
-      Math.round(255 - s * 255),
-      Math.round(255 - s * (255 - 38)),
+    color = [
+      white[0] + smooth_s * (red[0] - white[0]),
+      white[1] + smooth_s * (red[1] - white[1]),
+      white[2] + smooth_s * (red[2] - white[2]),
     ];
   }
+  
+  // Apply gamma correction (inverse gamma = 1/2.2)
+  const invGamma = 1 / 2.2;
+  const gammaCorrected = color.map(c => Math.pow(c, invGamma));
+  
+  return [
+    Math.round(gammaCorrected[0] * 255),
+    Math.round(gammaCorrected[1] * 255),
+    Math.round(gammaCorrected[2] * 255),
+  ];
 }
 
 /**

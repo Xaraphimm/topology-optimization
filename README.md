@@ -1,8 +1,8 @@
 # Topology Optimization Visualizer
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-233%20passing-brightgreen.svg)](./src/lib/__tests__)
+[![Tests](https://img.shields.io/badge/tests-287%20passing-brightgreen.svg)](./src/lib/__tests__)
 [![Live Demo](https://img.shields.io/badge/demo-live-success.svg)](https://topology-optimization-yump.vercel.app)
 
 Interactive web-based topology optimization using SIMP (Solid Isotropic Material with Penalization). Watch material distribute itself in real-time to create optimal structures.
@@ -13,7 +13,7 @@ Interactive web-based topology optimization using SIMP (Solid Isotropic Material
 
 ## Status
 
-**Version:** 1.0.0 (Official Release)  
+**Version:** 2.0.0 (Major Visual & Export Upgrade)  
 **Status:** Production Ready  
 **Live Demo:** https://topology-optimization-yump.vercel.app
 
@@ -21,6 +21,7 @@ Interactive web-based topology optimization using SIMP (Solid Isotropic Material
 
 ## Features
 
+### Core Optimization
 - **Real-time optimization** - SIMP algorithm running in WebAssembly with JavaScript fallback
 - **Hardware-accelerated rendering** - WebGL visualization with Canvas2D fallback
 - **Side-by-side comparison** - Compare different configurations simultaneously
@@ -28,6 +29,18 @@ Interactive web-based topology optimization using SIMP (Solid Isotropic Material
 - **Live convergence tracking** - Watch compliance, volume, and density change in real-time
 - **Interactive SIMP explainer** - Material model visualization with penalization slider
 - **100% client-side** - No servers, no data collection, complete privacy
+
+### Visual Quality (New in v2.0)
+- **Smooth bilinear rendering** - GPU-accelerated texture filtering eliminates pixelation
+- **Gamma-corrected output** - Perceptually uniform brightness for professional appearance
+- **Enhanced contrast** - Clearer solid/void boundaries using smoothstep enhancement
+- **Improved stress colormap** - Smoothstep interpolation for natural color transitions
+
+### High-Resolution Export (New in v2.0)
+- **PNG Export** - Up to 16x upsampling with bicubic interpolation
+- **SVG Vector Export** - Infinitely scalable using Marching Squares contour extraction
+- **Spline Smoothing** - Catmull-Rom curves for publication-quality vector output
+- **One-click download** - Export button integrated into visualization header
 
 ## Quick Start
 
@@ -55,10 +68,11 @@ Key steps:
 |-----------|------------|
 | **Frontend** | Next.js 16, React 19, TypeScript |
 | **Optimization** | Custom SIMP in Rust (WASM) + TypeScript fallback |
-| **Rendering** | WebGL with custom shaders, Canvas2D fallback |
+| **Rendering** | WebGL with gamma-corrected shaders, Canvas2D fallback |
+| **Export** | Bicubic upsampling, Marching Squares, Catmull-Rom splines |
 | **UI** | Tailwind CSS, Radix UI components |
 | **Charts** | Recharts for convergence visualization |
-| **Testing** | Vitest, 233 tests |
+| **Testing** | Vitest, 287 tests |
 
 ## Project Structure
 
@@ -67,7 +81,7 @@ topology-optimization/
 ├── src/
 │   ├── app/                    # Next.js App Router
 │   ├── components/
-│   │   ├── visualization/      # Canvas, controls, graphs
+│   │   ├── visualization/      # Canvas, controls, graphs, export UI
 │   │   ├── content/            # Educational explainers
 │   │   └── ui/                 # Shadcn/UI components
 │   └── lib/
@@ -75,7 +89,12 @@ topology-optimization/
 │       │   ├── simp.ts         # Core algorithm
 │       │   ├── simp.worker.ts  # Web Worker for off-thread computation
 │       │   └── wasm-pkg/       # Compiled WASM module
-│       └── webgl/              # WebGL rendering engine
+│       ├── webgl/              # WebGL rendering engine
+│       │   └── shaders.ts      # Gamma-corrected shaders
+│       └── export/             # High-res export module (NEW)
+│           ├── upsampling.ts   # Bilinear/bicubic interpolation
+│           ├── image-export.ts # PNG/JPEG export
+│           └── svg-export.ts   # Marching Squares + SVG generation
 ├── wasm-solver/                # Rust source for WASM solver
 └── DEPLOYMENT_NOTES.md         # Deployment instructions
 ```
@@ -102,10 +121,19 @@ The build process:
 ## Testing
 
 ```bash
-npm test              # Run all 233 tests
+npm test              # Run all 287 tests
 npm run test:watch    # Watch mode for development
 npm run test:coverage # Generate coverage report
 ```
+
+Test coverage includes:
+- Core SIMP algorithm (21 tests)
+- FEM solver (16 tests)
+- WebGL rendering & shaders (33 tests)
+- Visual rendering enhancements (18 tests)
+- Export functionality (36 tests)
+- Resolution switching (54 tests)
+- And more...
 
 ## Deployment
 
@@ -151,8 +179,29 @@ This release has been security audited:
 
 | Version | Date | Status | Notes |
 |---------|------|--------|-------|
-| 1.0.0 | Jan 17, 2026 | **Production** | Official release with full features |
-| 1.0.0-rc1 | Jan 17, 2026 | Release Candidate | Pre-release testing |
+| 2.0.0 | Jan 17, 2026 | **Production** | Major visual upgrade + high-res export |
+| 1.0.0 | Jan 17, 2026 | Stable | Official release with full features |
+| 1.0.0-rc1 | Jan 17, 2026 | Deprecated | Pre-release testing |
+
+### What's New in v2.0.0
+
+**Visual Engine Overhaul:**
+- Smooth bilinear texture filtering (WebGL)
+- Gamma correction (2.2) for perceptually uniform output
+- Contrast enhancement via smoothstep function
+- Improved stress colormap with Tailwind colors
+- Canvas2D fallback matches WebGL quality
+
+**Export System:**
+- PNG export with 4x/8x/16x bicubic upsampling
+- SVG vector export using Marching Squares algorithm
+- Catmull-Rom spline smoothing for curves
+- Integrated export button in UI
+
+**Testing:**
+- 54 new tests (233 -> 287 total)
+- Rendering enhancement tests
+- Export functionality tests
 
 ## License
 

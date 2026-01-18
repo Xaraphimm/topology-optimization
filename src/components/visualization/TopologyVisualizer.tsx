@@ -7,6 +7,7 @@ import { ProgressInfo } from './ProgressInfo';
 import { ColorLegend } from './ColorLegend';
 import { ConvergenceGraphs } from './ConvergenceGraphs';
 import { ComparisonView } from './ComparisonView';
+import { ExportButton } from './ExportButton';
 import { Button } from '@/components/ui/button';
 import { useOptimizer, type UseOptimizerConfig } from '@/lib/optimizer/useOptimizer';
 import { PRESETS, RESOLUTIONS, getMeshDimensions, getPreset } from '@/lib/presets';
@@ -199,7 +200,16 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
                 Stress
               </button>
             </div>
-            <ColorLegend viewMode={viewMode} />
+            <div className="flex items-center gap-3">
+              <ColorLegend viewMode={viewMode} />
+              <ExportButton
+                densities={displayDensities}
+                nelx={nelx}
+                nely={nely}
+                filename={`topology-${selectedPreset}-${resolution.label}`}
+                disabled={isRunning}
+              />
+            </div>
           </div>
         )}
         

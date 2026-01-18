@@ -3,7 +3,7 @@
  */
 
 export { WebGLRenderer } from './WebGLRenderer';
-export type { ViewMode } from './WebGLRenderer';
+export type { ViewMode, RenderingOptions } from './WebGLRenderer';
 export { useWebGLRenderer } from './useWebGLRenderer';
 export {
   vertexShaderSource,

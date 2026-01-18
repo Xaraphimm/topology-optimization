@@ -71,28 +71,94 @@ function createUniformDensities(nelx: number, nely: number, volumeFraction: numb
 }
 
 /**
+ * Smoothstep function for smooth interpolation
+ * Used to create more natural color transitions
+ */
+function smoothstep(x: number): number {
+  const t = Math.max(0, Math.min(1, x));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Apply gamma correction
+ * @param value - Linear value (0-1)
+ * @param gamma - Gamma value (default 2.2 for standard displays)
+ * @returns Gamma-corrected value
+ */
+function applyGamma(value: number, gamma: number = 2.2): number {
+  return Math.pow(Math.max(0, Math.min(1, value)), 1 / gamma);
+}
+
+/**
+ * Apply contrast enhancement using smoothstep
+ * Creates sharper visual boundaries while maintaining smooth gradients
+ */
+function enhanceContrast(value: number, low: number = 0.08, high: number = 0.92): number {
+  if (value <= low) return 0;
+  if (value >= high) return 1;
+  return (value - low) / (high - low);
+}
+
+/**
+ * Convert density to grayscale with gamma correction and contrast enhancement
+ * Matches the WebGL shader visual output
+ */
+function densityToGray(density: number): number {
+  // Apply gamma correction for perceptually uniform brightness
+  const gammaCorrected = applyGamma(density);
+  
+  // Apply contrast enhancement
+  const enhanced = enhanceContrast(gammaCorrected);
+  
+  // Invert: 0 (void) = white, 1 (solid) = black
+  const gray = 1 - enhanced;
+  
+  // Apply inverse gamma for final output
+  return applyGamma(gray);
+}
+
+/**
  * Convert a value in [0,1] to a blue-white-red color
  * 0 = blue (low stress), 0.5 = white, 1 = red (high stress)
+ * 
+ * Enhanced with smoothstep interpolation and gamma correction
+ * to match WebGL shader output
  */
 function stressToColor(normalizedValue: number): string {
   // Clamp to [0, 1]
   const t = Math.max(0, Math.min(1, normalizedValue));
   
-  let r: number, g: number, b: number;
+  // Define colors in linear space (matching WebGL shader)
+  const blue = [0.231, 0.510, 0.965];
+  const white = [1.0, 1.0, 1.0];
+  const red = [0.937, 0.267, 0.267];
+  
+  let color: number[];
   
   if (t < 0.5) {
-    // Blue to white (0 to 0.5)
-    const s = t * 2; // 0 to 1
-    r = Math.round(59 + s * (255 - 59));   // 59 -> 255
-    g = Math.round(130 + s * (255 - 130)); // 130 -> 255
-    b = Math.round(246 + s * (255 - 246)); // 246 -> 255
+    // Blue to white transition with smoothstep
+    const s = t * 2;
+    const smooth_s = smoothstep(s);
+    color = [
+      blue[0] + smooth_s * (white[0] - blue[0]),
+      blue[1] + smooth_s * (white[1] - blue[1]),
+      blue[2] + smooth_s * (white[2] - blue[2]),
+    ];
   } else {
-    // White to red (0.5 to 1)
-    const s = (t - 0.5) * 2; // 0 to 1
-    r = 255;
-    g = Math.round(255 - s * 255); // 255 -> 0
-    b = Math.round(255 - s * 217); // 255 -> 38
+    // White to red transition with smoothstep
+    const s = (t - 0.5) * 2;
+    const smooth_s = smoothstep(s);
+    color = [
+      white[0] + smooth_s * (red[0] - white[0]),
+      white[1] + smooth_s * (red[1] - white[1]),
+      white[2] + smooth_s * (red[2] - white[2]),
+    ];
   }
+  
+  // Apply gamma correction
+  const r = Math.round(applyGamma(color[0]) * 255);
+  const g = Math.round(applyGamma(color[1]) * 255);
+  const b = Math.round(applyGamma(color[2]) * 255);
   
   return `rgb(${r}, ${g}, ${b})`;
 }
@@ -213,8 +279,9 @@ export function Canvas({
         const canvasY = (nely - 1 - ely) * elemHeight; // Flip Y
         
         if (viewMode === 'material' || isPreview) {
-          // Convert density to grayscale (0=white/void, 1=black/solid)
-          const gray = Math.round((1 - density) * 255);
+          // Convert density to grayscale with gamma correction and contrast enhancement
+          // This matches the WebGL shader output for visual consistency
+          const gray = Math.round(densityToGray(density) * 255);
           ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
         } else {
           // Stress view: blue-white-red heatmap
@@ -227,7 +294,14 @@ export function Canvas({
           }
         }
         
-        ctx.fillRect(canvasX, canvasY, elemWidth + 0.5, elemHeight + 0.5);
+        // Use Math.floor/ceil to ensure no hairline gaps between elements
+        // The +1 overlap ensures clean rendering on all displays and DPR values
+        ctx.fillRect(
+          Math.floor(canvasX),
+          Math.floor(canvasY),
+          Math.ceil(elemWidth) + 1,
+          Math.ceil(elemHeight) + 1
+        );
       }
     }
   }, [densities, strainEnergy, nelx, nely, viewMode, isDark, initialVolumeFraction, actuallyUsingWebGL]);
