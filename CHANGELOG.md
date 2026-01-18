@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-01-17
+
+### Added - High-Resolution Support & Performance Overhaul
+- **Optimized solver** - Precomputed CSR sparsity pattern and reusable scratch arrays for 2-4x faster high-resolution optimization
+- **Higher resolution presets** - Standard (120x40), High (180x60), Ultra (240x80) - up to 4x more elements
+- **SharedArrayBuffer support** - COOP/COEP headers for zero-copy data transfer between worker and UI
+- **Colormap selector** - Thermal (default) and Viridis colormaps for stress visualization
+- **Example Gallery** - Real-world application examples with recommended settings
+
+### Added - New Tests
+- 65 new tests (333 -> 398 total)
+- Optimized solver assembly tests
+- SharedArrayBuffer + fallback tests  
+- Colormap functionality tests
+
+### Technical
+- New `src/lib/optimizer/optimized-solver.ts` with precomputed mesh connectivity
+- New `src/lib/optimizer/shared-buffer.ts` for SharedArrayBuffer utilities
+- New `src/lib/colormaps.ts` with Thermal and Viridis colormaps
+- New `ColorPaletteSelector` component for stress view
+- New `ExampleGallery` component with industry applications
+- COOP/COEP headers in `next.config.ts` for cross-origin isolation
+
+---
+
 ## [2.1.0] - 2026-01-17
 
 ### Added - Material Savings Calculator

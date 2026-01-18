@@ -3,11 +3,21 @@
  * 
  * Main optimizer class that orchestrates the topology optimization process.
  * Based on Sigmund's 99-line MATLAB code with improvements for browser performance.
+ * 
+ * v2.2.0: Uses optimized solver with precomputed CSR sparsity and reusable scratch arrays
+ * for 2-4x higher resolution support.
  */
 
 import { computeElementStiffness, getElementDOFs, getTotalDOFs, getNodeIndex } from './fem';
 import { assembleStiffnessMatrix, applyBoundaryConditions, conjugateGradient } from './solver';
 import { prepareFilter, applySensitivityFilter, FilterData } from './filter';
+import {
+  precomputeMeshConnectivity,
+  createSolverScratch,
+  solveFEMOptimized,
+  type MeshConnectivity,
+  type SolverScratch,
+} from './optimized-solver';
 import type { OptimizationState, ProblemDefinition } from './types';
 
 /**
@@ -66,6 +76,12 @@ export class SIMPOptimizer {
   private xold: Float64Array;
   private strainEnergy: Float64Array;  // Strain energy per element (for stress visualization)
   
+  // Optimized solver infrastructure (v2.2.0)
+  private useOptimizedSolver: boolean = true;
+  private meshConnectivity: MeshConnectivity | null = null;
+  private solverScratch: SolverScratch | null = null;
+  private csrValues: Float64Array | null = null;
+  
   constructor(config: Partial<SIMPConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     
@@ -90,6 +106,33 @@ export class SIMPOptimizer {
     this.dc = new Float64Array(nelem);
     this.xold = new Float64Array(nelem);
     this.strainEnergy = new Float64Array(nelem);
+    
+    // Initialize optimized solver infrastructure
+    this.initOptimizedSolver();
+  }
+  
+  /**
+   * Initialize optimized solver with precomputed mesh connectivity
+   */
+  private initOptimizedSolver(): void {
+    try {
+      const { nelx, nely, nu } = this.config;
+      const nDofs = getTotalDOFs(nelx, nely);
+      
+      // Precompute mesh connectivity (expensive, but done only once)
+      this.meshConnectivity = precomputeMeshConnectivity(nelx, nely, nu);
+      
+      // Create reusable scratch arrays
+      this.solverScratch = createSolverScratch(nDofs);
+      
+      // Allocate CSR values array (structure is in meshConnectivity)
+      this.csrValues = new Float64Array(this.meshConnectivity.nnz);
+      
+      this.useOptimizedSolver = true;
+    } catch (error) {
+      console.warn('Failed to initialize optimized solver, falling back to standard solver:', error);
+      this.useOptimizedSolver = false;
+    }
   }
   
   /**
@@ -182,13 +225,30 @@ export class SIMPOptimizer {
     }
     
     // FE Analysis: Assemble K and solve Ku = f
-    const K = assembleStiffnessMatrix(nelx, nely, this.densities, penal, Emin, E0, nu);
-    const fMod = applyBoundaryConditions(K, this.forces, this.fixedDofs);
-    
-    // Solve using CG
-    this.u.fill(0); // Reset initial guess for cleaner solve
-    const solveResult = conjugateGradient(K, fMod, this.u, 1e-8, 10000);
-    this.u = solveResult.x;
+    // Use optimized solver if available (2-4x faster at high resolution)
+    if (this.useOptimizedSolver && this.meshConnectivity && this.solverScratch && this.csrValues) {
+      // Optimized path: uses precomputed CSR sparsity and reusable scratch arrays
+      this.u.fill(0);
+      solveFEMOptimized(
+        this.meshConnectivity,
+        this.densities,
+        this.forces,
+        this.fixedDofs,
+        this.u,
+        this.solverScratch,
+        this.csrValues,
+        penal,
+        Emin,
+        E0
+      );
+    } else {
+      // Fallback: standard solver (for compatibility)
+      const K = assembleStiffnessMatrix(nelx, nely, this.densities, penal, Emin, E0, nu);
+      const fMod = applyBoundaryConditions(K, this.forces, this.fixedDofs);
+      this.u.fill(0);
+      const solveResult = conjugateGradient(K, fMod, this.u, 1e-8, 10000);
+      this.u = solveResult.x;
+    }
     
     // Compute objective (compliance) and sensitivities
     let c = 0;
@@ -350,6 +410,9 @@ export class SIMPOptimizer {
       this.dc = new Float64Array(nelem);
       this.xold = new Float64Array(nelem);
       this.strainEnergy = new Float64Array(nelem);
+      
+      // Re-initialize optimized solver for new mesh size
+      this.initOptimizedSolver();
     }
     
     this.reset();

@@ -180,16 +180,38 @@ export function getPreset(id: string): Preset | undefined {
 
 /**
  * Mesh resolution options
+ * 
+ * v2.2.0: Updated with higher resolution presets (2-4x improvement)
+ * - Standard: 120x40 (4,800 elements) - fast, good for exploration
+ * - High: 180x60 (10,800 elements) - balanced quality/speed
+ * - Ultra: 240x80 (19,200 elements) - publication quality
  */
 export interface Resolution {
   id: string;
   label: string;
   baseNelx: number;  // Base width for aspect ratio 1
+  description?: string;
 }
 
 export const RESOLUTIONS: Resolution[] = [
-  { id: 'low', label: '60x20', baseNelx: 60 },
-  { id: 'high', label: '120x40', baseNelx: 120 },
+  { 
+    id: 'standard', 
+    label: '120x40', 
+    baseNelx: 120,
+    description: 'Fast exploration'
+  },
+  { 
+    id: 'high', 
+    label: '180x60', 
+    baseNelx: 180,
+    description: 'Balanced quality'
+  },
+  { 
+    id: 'ultra', 
+    label: '240x80', 
+    baseNelx: 240,
+    description: 'Publication quality'
+  },
 ];
 
 /**

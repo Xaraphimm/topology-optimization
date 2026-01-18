@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { WebGLRenderer, useWebGLRenderer } from '@/lib/webgl';
+import { getColormap, getDefaultColormap, type Colormap } from '@/lib/colormaps';
 
 interface Support {
   x: number;
@@ -31,6 +32,8 @@ interface CanvasProps {
   initialVolumeFraction?: number;
   /** Prefer WebGL rendering when available (default: true) */
   preferWebGL?: boolean;
+  /** Colormap ID for stress view (default: 'thermal') */
+  stressColormap?: string;
 }
 
 /**
@@ -118,13 +121,26 @@ function densityToGray(density: number): number {
 }
 
 /**
- * Convert a value in [0,1] to a blue-white-red color
- * 0 = blue (low stress), 0.5 = white, 1 = red (high stress)
+ * Convert a value in [0,1] to a stress color using the specified colormap
  * 
- * Enhanced with smoothstep interpolation and gamma correction
- * to match WebGL shader output
+ * @param normalizedValue - Normalized stress value [0, 1]
+ * @param colormap - Colormap to use (default: thermal)
  */
-function stressToColor(normalizedValue: number): string {
+function stressToColorWithMap(normalizedValue: number, colormap: Colormap): string {
+  // Clamp to [0, 1]
+  const t = Math.max(0, Math.min(1, normalizedValue));
+  
+  // Get RGB from colormap
+  const rgb = colormap.lookup(t);
+  
+  return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+}
+
+/**
+ * Legacy stress color function (blue-white-red)
+ * Used when no colormap is specified or as fallback
+ */
+function stressToColorLegacy(normalizedValue: number): string {
   // Clamp to [0, 1]
   const t = Math.max(0, Math.min(1, normalizedValue));
   
@@ -185,7 +201,10 @@ export function Canvas({
   className = '',
   initialVolumeFraction = 0.5,
   preferWebGL = true,
+  stressColormap = 'thermal',
 }: CanvasProps) {
+  // Get the colormap for stress view
+  const colormap = getColormap(stressColormap) || getDefaultColormap();
   // Main canvas for WebGL or Canvas2D mesh rendering
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
   // Overlay canvas for boundary conditions (always Canvas2D)
@@ -284,11 +303,11 @@ export function Canvas({
           const gray = Math.round(densityToGray(density) * 255);
           ctx.fillStyle = `rgb(${gray}, ${gray}, ${gray})`;
         } else {
-          // Stress view: blue-white-red heatmap
+          // Stress view: use selected colormap
           if (strainEnergy && maxStrainEnergy > 0) {
             // Normalize strain energy and apply sqrt to spread out colors more
             const normalized = Math.sqrt(strainEnergy[elemIdx] / maxStrainEnergy);
-            ctx.fillStyle = stressToColor(normalized);
+            ctx.fillStyle = stressToColorWithMap(normalized, colormap);
           } else {
             ctx.fillStyle = '#e5e7eb';
           }
@@ -304,7 +323,7 @@ export function Canvas({
         );
       }
     }
-  }, [densities, strainEnergy, nelx, nely, viewMode, isDark, initialVolumeFraction, actuallyUsingWebGL]);
+  }, [densities, strainEnergy, nelx, nely, viewMode, isDark, initialVolumeFraction, actuallyUsingWebGL, colormap]);
   
   // Render boundary conditions overlay (always Canvas2D)
   const renderOverlay = useCallback(() => {

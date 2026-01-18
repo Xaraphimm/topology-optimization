@@ -9,6 +9,7 @@ import { ConvergenceGraphs } from './ConvergenceGraphs';
 import { ComparisonView } from './ComparisonView';
 import { ExportButton } from './ExportButton';
 import { MaterialSavingsCalculator } from './MaterialSavingsCalculator';
+import { ColorPaletteSelector } from './ColorPaletteSelector';
 import { Button } from '@/components/ui/button';
 import { useOptimizer, type UseOptimizerConfig } from '@/lib/optimizer/useOptimizer';
 import { PRESETS, RESOLUTIONS, getMeshDimensions, getPreset } from '@/lib/presets';
@@ -31,6 +32,7 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
   const [selectedResolution, setSelectedResolution] = useState(RESOLUTIONS[0].id);
   const [volumeFraction, setVolumeFraction] = useState(0.5);
   const [viewMode, setViewMode] = useState<ViewMode>('material');
+  const [stressColormap, setStressColormap] = useState('thermal');
   
   // Track if optimization has started (for showing view toggle and progress)
   const [hasStarted, setHasStarted] = useState(false);
@@ -202,6 +204,12 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
               </button>
             </div>
             <div className="flex items-center gap-3">
+              {viewMode === 'stress' && (
+                <ColorPaletteSelector
+                  selectedColormap={stressColormap}
+                  onColormapChange={setStressColormap}
+                />
+              )}
               <ColorLegend viewMode={viewMode} />
               <ExportButton
                 densities={displayDensities}
@@ -224,6 +232,7 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
             supports={bcData.supports}
             loads={bcData.loads}
             initialVolumeFraction={volumeFraction}
+            stressColormap={stressColormap}
           />
           
           {/* Loading indicator when worker is initializing */}

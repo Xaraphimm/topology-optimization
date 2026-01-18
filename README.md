@@ -1,8 +1,8 @@
 # Topology Optimization Visualizer
 
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-333%20passing-brightgreen.svg)](./src/lib/__tests__)
+[![Tests](https://img.shields.io/badge/tests-398%20passing-brightgreen.svg)](./src/lib/__tests__)
 [![Live Demo](https://img.shields.io/badge/demo-live-success.svg)](https://topology-optimization-yump.vercel.app)
 
 Interactive web-based topology optimization using SIMP (Solid Isotropic Material with Penalization). Watch material distribute itself in real-time to create optimal structures.
@@ -13,7 +13,7 @@ Interactive web-based topology optimization using SIMP (Solid Isotropic Material
 
 ## Status
 
-**Version:** 2.1.0 (Material Savings Calculator)  
+**Version:** 2.2.0 (High-Resolution + Colormaps)  
 **Status:** Production Ready  
 **Live Demo:** https://topology-optimization-yump.vercel.app
 
@@ -49,6 +49,14 @@ Interactive web-based topology optimization using SIMP (Solid Isotropic Material
 - **Custom dimensions** - Input your part size to calculate actual weight and cost savings
 - **Cost estimation** - Approximate material cost savings based on market prices
 
+### High-Resolution Support (New in v2.2)
+- **Resolution presets** - Standard (120x40), High (180x60), Ultra (240x80) mesh options
+- **Optimized solver** - Precomputed CSR sparsity pattern, reusable CG scratch arrays for faster iteration
+- **SharedArrayBuffer support** - Zero-copy data transfer with COOP/COEP headers for cross-origin isolation
+- **Colormap system** - Thermal (default) and Viridis palettes for stress visualization
+- **Color palette selector** - Switch between colormaps in real-time
+- **Example gallery** - 4 real-world aerospace examples with interactive descriptions
+
 ## Quick Start
 
 ```bash
@@ -79,7 +87,7 @@ Key steps:
 | **Export** | Bicubic upsampling, Marching Squares, Catmull-Rom splines |
 | **UI** | Tailwind CSS, Radix UI components |
 | **Charts** | Recharts for convergence visualization |
-| **Testing** | Vitest, 333 tests |
+| **Testing** | Vitest, 398 tests |
 
 ## Project Structure
 
@@ -94,10 +102,13 @@ topology-optimization/
 │   └── lib/
 │       ├── optimizer/          # SIMP solver + Web Worker
 │       │   ├── simp.ts         # Core algorithm
+│       │   ├── optimized-solver.ts  # CSR-optimized FEM solver
+│       │   ├── shared-buffer.ts     # SharedArrayBuffer utilities
 │       │   ├── simp.worker.ts  # Web Worker for off-thread computation
 │       │   └── wasm-pkg/       # Compiled WASM module
 │       ├── webgl/              # WebGL rendering engine
 │       │   └── shaders.ts      # Gamma-corrected shaders
+│       ├── colormaps.ts        # Thermal/Viridis colormap system
 │       ├── export/             # High-res export module
 │       └── material-savings.ts # Material savings calculator
 │           ├── upsampling.ts   # Bilinear/bicubic interpolation
@@ -129,7 +140,7 @@ The build process:
 ## Testing
 
 ```bash
-npm test              # Run all 333 tests
+npm test              # Run all 398 tests
 npm run test:watch    # Watch mode for development
 npm run test:coverage # Generate coverage report
 ```
@@ -188,10 +199,38 @@ This release has been security audited:
 
 | Version | Date | Status | Notes |
 |---------|------|--------|-------|
-| 2.1.0 | Jan 17, 2026 | **Production** | Material savings calculator |
+| 2.2.0 | Jan 17, 2026 | **Production** | High-resolution support + colormap system |
+| 2.1.0 | Jan 17, 2026 | Stable | Material savings calculator |
 | 2.0.0 | Jan 17, 2026 | Stable | Major visual upgrade + high-res export |
 | 1.0.0 | Jan 17, 2026 | Stable | Official release with full features |
 | 1.0.0-rc1 | Jan 17, 2026 | Deprecated | Pre-release testing |
+
+### What's New in v2.2.0
+
+**High-Resolution Mesh Support:**
+- New resolution presets: Standard (120x40), High (180x60), Ultra (240x80)
+- Optimized FEM solver with precomputed CSR sparsity pattern
+- Reusable conjugate gradient scratch arrays for reduced memory allocation
+- SharedArrayBuffer support for zero-copy worker data transfer
+- COOP/COEP headers configured for cross-origin isolation
+
+**Colormap System:**
+- Thermal colormap (default): Blue-Cyan-Green-Yellow-Red gradient
+- Viridis colormap: Perceptually uniform, colorblind-friendly
+- Real-time palette switching via UI selector
+- Applied to stress visualization mode
+
+**Example Gallery:**
+- 4 interactive real-world aerospace examples
+- Wing rib, engine mount, satellite bracket, landing gear fitting
+- Educational descriptions with engineering context
+
+**Testing:**
+- 65 new tests (333 -> 398 total)
+- Optimized solver tests (16)
+- SharedArrayBuffer tests (10)
+- Colormap system tests (30)
+- Integration tests (9)
 
 ### What's New in v2.1.0
 

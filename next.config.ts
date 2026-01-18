@@ -43,6 +43,16 @@ const nextConfig: NextConfig = {
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block'
+          },
+          // COOP/COEP headers for SharedArrayBuffer support (high-res optimization)
+          // These enable cross-origin isolation required for SharedArrayBuffer
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin'
+          },
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'require-corp'
           }
         ]
       }
