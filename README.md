@@ -1,8 +1,8 @@
 # Topology Optimization Visualizer
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-287%20passing-brightgreen.svg)](./src/lib/__tests__)
+[![Tests](https://img.shields.io/badge/tests-333%20passing-brightgreen.svg)](./src/lib/__tests__)
 [![Live Demo](https://img.shields.io/badge/demo-live-success.svg)](https://topology-optimization-yump.vercel.app)
 
 Interactive web-based topology optimization using SIMP (Solid Isotropic Material with Penalization). Watch material distribute itself in real-time to create optimal structures.
@@ -13,7 +13,7 @@ Interactive web-based topology optimization using SIMP (Solid Isotropic Material
 
 ## Status
 
-**Version:** 2.0.0 (Major Visual & Export Upgrade)  
+**Version:** 2.1.0 (Material Savings Calculator)  
 **Status:** Production Ready  
 **Live Demo:** https://topology-optimization-yump.vercel.app
 
@@ -41,6 +41,13 @@ Interactive web-based topology optimization using SIMP (Solid Isotropic Material
 - **SVG Vector Export** - Infinitely scalable using Marching Squares contour extraction
 - **Spline Smoothing** - Catmull-Rom curves for publication-quality vector output
 - **One-click download** - Export button integrated into visualization header
+
+### Material Savings Calculator (New in v2.1)
+- **Real-time savings display** - Shows percentage of material saved during optimization
+- **Weight reduction ratio** - See how many times lighter the optimized structure is
+- **Multi-material support** - 10 engineering materials (aluminum, steel, titanium, composites, polymers)
+- **Custom dimensions** - Input your part size to calculate actual weight and cost savings
+- **Cost estimation** - Approximate material cost savings based on market prices
 
 ## Quick Start
 
@@ -72,7 +79,7 @@ Key steps:
 | **Export** | Bicubic upsampling, Marching Squares, Catmull-Rom splines |
 | **UI** | Tailwind CSS, Radix UI components |
 | **Charts** | Recharts for convergence visualization |
-| **Testing** | Vitest, 287 tests |
+| **Testing** | Vitest, 333 tests |
 
 ## Project Structure
 
@@ -91,7 +98,8 @@ topology-optimization/
 │       │   └── wasm-pkg/       # Compiled WASM module
 │       ├── webgl/              # WebGL rendering engine
 │       │   └── shaders.ts      # Gamma-corrected shaders
-│       └── export/             # High-res export module (NEW)
+│       ├── export/             # High-res export module
+│       └── material-savings.ts # Material savings calculator
 │           ├── upsampling.ts   # Bilinear/bicubic interpolation
 │           ├── image-export.ts # PNG/JPEG export
 │           └── svg-export.ts   # Marching Squares + SVG generation
@@ -121,7 +129,7 @@ The build process:
 ## Testing
 
 ```bash
-npm test              # Run all 287 tests
+npm test              # Run all 333 tests
 npm run test:watch    # Watch mode for development
 npm run test:coverage # Generate coverage report
 ```
@@ -132,6 +140,7 @@ Test coverage includes:
 - WebGL rendering & shaders (33 tests)
 - Visual rendering enhancements (18 tests)
 - Export functionality (36 tests)
+- Material savings calculator (46 tests)
 - Resolution switching (54 tests)
 - And more...
 
@@ -179,9 +188,26 @@ This release has been security audited:
 
 | Version | Date | Status | Notes |
 |---------|------|--------|-------|
-| 2.0.0 | Jan 17, 2026 | **Production** | Major visual upgrade + high-res export |
+| 2.1.0 | Jan 17, 2026 | **Production** | Material savings calculator |
+| 2.0.0 | Jan 17, 2026 | Stable | Major visual upgrade + high-res export |
 | 1.0.0 | Jan 17, 2026 | Stable | Official release with full features |
 | 1.0.0-rc1 | Jan 17, 2026 | Deprecated | Pre-release testing |
+
+### What's New in v2.1.0
+
+**Material Savings Calculator:**
+- Real-time material savings percentage display
+- Weight reduction ratio (e.g., "2.5x lighter")
+- Database of 10 engineering materials with density and cost data
+- Custom dimension input for calculating actual part savings
+- Quick comparison view for aluminum, steel, and titanium
+- Cost estimation based on market prices
+
+**Testing:**
+- 46 new tests (287 -> 333 total)
+- Material database validation
+- Savings calculation accuracy
+- Formatting utility tests
 
 ### What's New in v2.0.0
 

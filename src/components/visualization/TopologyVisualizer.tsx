@@ -8,6 +8,7 @@ import { ColorLegend } from './ColorLegend';
 import { ConvergenceGraphs } from './ConvergenceGraphs';
 import { ComparisonView } from './ComparisonView';
 import { ExportButton } from './ExportButton';
+import { MaterialSavingsCalculator } from './MaterialSavingsCalculator';
 import { Button } from '@/components/ui/button';
 import { useOptimizer, type UseOptimizerConfig } from '@/lib/optimizer/useOptimizer';
 import { PRESETS, RESOLUTIONS, getMeshDimensions, getPreset } from '@/lib/presets';
@@ -251,6 +252,11 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
           history={history}
           isRunning={isRunning}
         />
+      )}
+      
+      {/* Material Savings Calculator - only show after optimization has started */}
+      {hasStarted && (
+        <MaterialSavingsCalculator volumeFraction={state.volume} />
       )}
       
       {/* Controls */}

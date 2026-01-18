@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-01-17
+
+### Added - Material Savings Calculator
+- **Real-time savings display** - Shows percentage of material saved during optimization
+- **Weight reduction ratio** - Displays how many times lighter the optimized structure is
+- **Multi-material database** - 10 engineering materials (aluminum, steel, titanium, composites, polymers)
+- **Custom dimensions input** - Calculate actual weight/cost savings for your part size
+- **Cost estimation** - Approximate material cost savings based on market prices
+- **Quick comparison view** - Side-by-side aluminum, steel, and titanium savings
+
+### Added - New Tests
+- 46 new tests for material savings functionality (287 -> 333 total)
+- Material database validation tests
+- Savings calculation tests
+- Formatting utility tests
+- Integration scenario tests (aerospace parts, 3D printing)
+
+### Technical
+- New `src/lib/material-savings.ts` module with calculation logic
+- New `MaterialSavingsCalculator.tsx` UI component
+- Material database with density and cost data for 10 materials
+
+---
+
 ## [2.0.0] - 2026-01-17
 
 ### Added - Visual Engine Overhaul
