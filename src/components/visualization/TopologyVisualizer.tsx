@@ -233,6 +233,7 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
             loads={bcData.loads}
             initialVolumeFraction={volumeFraction}
             stressColormap={stressColormap}
+            presetId={selectedPreset}
           />
           
           {/* Loading indicator when worker is initializing */}

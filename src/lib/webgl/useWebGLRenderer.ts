@@ -11,17 +11,6 @@ interface UseWebGLRendererResult {
 }
 
 /**
- * Create a uniform density array for preview rendering
- * Used when no actual density data is available yet
- */
-function createUniformDensities(nelx: number, nely: number, volumeFraction: number): Float64Array {
-  const size = nelx * nely;
-  const densities = new Float64Array(size);
-  densities.fill(volumeFraction);
-  return densities;
-}
-
-/**
  * Check if a density array matches the expected dimensions
  * This prevents rendering stale data from a previous resolution
  */
@@ -40,7 +29,7 @@ function isDensityArrayValid(densities: Float64Array | null, nelx: number, nely:
  * @param nelx - Number of elements in x direction
  * @param nely - Number of elements in y direction
  * @param viewMode - Current view mode ('material' or 'stress')
- * @param initialVolumeFraction - Volume fraction for preview rendering when densities is null
+ * @param previewDensities - Preview density pattern to show when densities is null
  * @param stressColormap - Colormap ID for stress visualization (default: 'thermal')
  * @returns Object containing WebGL availability status, any error message, and manual render function
  */
@@ -51,7 +40,7 @@ export function useWebGLRenderer(
   nelx: number,
   nely: number,
   viewMode: ViewMode,
-  initialVolumeFraction: number = 0.5,
+  previewDensities: Float64Array,
   stressColormap: string = 'thermal'
 ): UseWebGLRendererResult {
   const rendererRef = useRef<WebGLRenderer | null>(null);
@@ -111,15 +100,15 @@ export function useWebGLRenderer(
     // This prevents rendering stale data from a previous resolution (e.g., 60x20 data on 120x40 canvas)
     const hasValidDensities = isDensityArrayValid(densities, nelx, nely);
     
-    // Use actual densities only if they match current dimensions, otherwise create uniform preview
+    // Use actual densities only if they match current dimensions, otherwise use preview pattern
     const displayDensities = hasValidDensities 
       ? densities! 
-      : createUniformDensities(nelx, nely, initialVolumeFraction);
+      : previewDensities;
     
     renderer.updateDensities(displayDensities, nelx, nely);
     // Immediately render after updating densities to ensure display is current
     renderer.render(viewMode);
-  }, [densities, nelx, nely, viewMode, initialVolumeFraction]);
+  }, [densities, nelx, nely, viewMode, previewDensities]);
 
   // Update stress texture when data changes
   // Also validates that stress array matches current dimensions

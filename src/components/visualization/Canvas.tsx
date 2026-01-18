@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { WebGLRenderer, useWebGLRenderer } from '@/lib/webgl';
 import { getColormap, getDefaultColormap, type Colormap } from '@/lib/colormaps';
+import { createPreviewPattern } from '@/lib/preview-pattern';
 
 interface Support {
   x: number;
@@ -34,6 +35,8 @@ interface CanvasProps {
   preferWebGL?: boolean;
   /** Colormap ID for stress view (default: 'thermal') */
   stressColormap?: string;
+  /** Preset ID for generating preview pattern (default: 'mbb') */
+  presetId?: string;
 }
 
 /**
@@ -202,9 +205,15 @@ export function Canvas({
   initialVolumeFraction = 0.5,
   preferWebGL = true,
   stressColormap = 'thermal',
+  presetId = 'mbb',
 }: CanvasProps) {
   // Get the colormap for stress view
   const colormap = getColormap(stressColormap) || getDefaultColormap();
+  
+  // Generate preview pattern (memoized to avoid regeneration on every render)
+  const previewDensities = useMemo(() => {
+    return createPreviewPattern(nelx, nely, presetId, initialVolumeFraction, supports, loads);
+  }, [nelx, nely, presetId, initialVolumeFraction, supports, loads]);
   // Main canvas for WebGL or Canvas2D mesh rendering
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
   // Overlay canvas for boundary conditions (always Canvas2D)
@@ -234,7 +243,7 @@ export function Canvas({
     nelx,
     nely,
     viewMode,
-    initialVolumeFraction,
+    previewDensities,
     stressColormap
   );
   
@@ -272,8 +281,8 @@ export function Canvas({
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, displayWidth, displayHeight);
     
-    // Use actual densities if available, otherwise create uniform preview mesh
-    const displayDensities = densities || createUniformDensities(nelx, nely, initialVolumeFraction);
+    // Use actual densities if available, otherwise use ghosted preview pattern
+    const displayDensities = densities || previewDensities;
     const isPreview = !densities;
     
     // For stress view, normalize strain energy to [0, 1]
@@ -324,7 +333,7 @@ export function Canvas({
         );
       }
     }
-  }, [densities, strainEnergy, nelx, nely, viewMode, isDark, initialVolumeFraction, actuallyUsingWebGL, colormap]);
+  }, [densities, strainEnergy, nelx, nely, viewMode, isDark, initialVolumeFraction, actuallyUsingWebGL, colormap, previewDensities]);
   
   // Render boundary conditions overlay (always Canvas2D)
   const renderOverlay = useCallback(() => {

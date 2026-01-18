@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-01-17
+
+### Fixed - Initial Canvas Preview
+- **Ghosted topology preview** - Canvas now shows a preset-specific structural hint instead of uniform gray
+- MBB beam preview shows diagonal truss pattern with flange emphasis
+- Cantilever preview shows tapered shape with material concentrated at fixed end
+- Bridge preview shows arch curve with tie beam and support columns
+
+### Added - New Tests
+- 15 new tests for preview pattern generation (414 -> 429 total)
+
+### Technical
+- New `src/lib/preview-pattern.ts` with `createPreviewPattern()` function
+- Pattern generators for MBB, Cantilever, and Bridge presets
+- Canvas and WebGL renderer now use preview densities instead of uniform gray
+- Preview pattern is deterministic based on preset, mesh size, and volume fraction
+
+---
+
 ## [2.2.0] - 2026-01-17
 
 ### Added - High-Resolution Support & Performance Overhaul

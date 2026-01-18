@@ -170,6 +170,7 @@ export function ComparisonPanel({
           supports={bcData.supports}
           loads={bcData.loads}
           initialVolumeFraction={config.volumeFraction}
+          presetId={config.presetId}
         />
         
         {/* Loading indicator */}
