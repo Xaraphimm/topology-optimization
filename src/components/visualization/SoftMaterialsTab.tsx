@@ -167,6 +167,17 @@ export function SoftMaterialsTab({ className = '' }: SoftMaterialsTabProps) {
   const displayStrainEnergy = hasStarted && state.strainEnergy.length > 0 ? state.strainEnergy : null;
   const displayRuptureRisk = hasStarted && state.ruptureRisk.length > 0 ? state.ruptureRisk : null;
 
+  // Convert rupture risk array to Float64Array for Canvas stress visualization
+  // Rupture risk values are already normalized to [0,1] range
+  const ruptureRiskAsStress = useMemo(() => {
+    if (!displayRuptureRisk || displayRuptureRisk.length === 0) return null;
+    const arr = new Float64Array(displayRuptureRisk.length);
+    for (let i = 0; i < displayRuptureRisk.length; i++) {
+      arr[i] = displayRuptureRisk[i];
+    }
+    return arr;
+  }, [displayRuptureRisk]);
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header with material info */}
@@ -245,8 +256,8 @@ export function SoftMaterialsTab({ className = '' }: SoftMaterialsTabProps) {
 
         <div className="relative">
           <Canvas
-            densities={viewMode === 'rupture' ? displayRuptureRisk : displayDensities}
-            strainEnergy={displayStrainEnergy}
+            densities={displayDensities}
+            strainEnergy={viewMode === 'rupture' ? ruptureRiskAsStress : displayStrainEnergy}
             nelx={nelx}
             nely={nely}
             viewMode={viewMode === 'rupture' ? 'stress' : viewMode}

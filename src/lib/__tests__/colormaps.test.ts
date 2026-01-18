@@ -18,14 +18,15 @@ import {
 } from '../colormaps';
 
 describe('COLORMAPS', () => {
-  it('should have at least 2 colormaps', () => {
-    expect(COLORMAPS.length).toBeGreaterThanOrEqual(2);
+  it('should have at least 3 colormaps', () => {
+    expect(COLORMAPS.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('should have thermal and viridis colormaps', () => {
+  it('should have thermal, viridis, and rupture colormaps', () => {
     const ids = COLORMAPS.map(c => c.id);
     expect(ids).toContain('thermal');
     expect(ids).toContain('viridis');
+    expect(ids).toContain('rupture');
   });
 
   it('should have unique IDs', () => {
@@ -284,8 +285,79 @@ describe('Viridis colormap visual characteristics', () => {
   it('should transition through green in the middle', () => {
     const viridis = getColormap('viridis')!;
     const rgb = viridis.lookup(0.5);
-    
+
     // Mid-range should have significant green
     expect(rgb[1]).toBeGreaterThan(100);
+  });
+});
+
+describe('Rupture colormap visual characteristics', () => {
+  it('should have green tones at low values (safe)', () => {
+    const rupture = getColormap('rupture')!;
+    const rgb = rupture.lookup(0);
+
+    // Green = low red, high green, low blue
+    expect(rgb[1]).toBeGreaterThan(150); // High green
+    expect(rgb[0]).toBeLessThan(100);    // Low red
+  });
+
+  it('should have red tones at high values (rupture risk)', () => {
+    const rupture = getColormap('rupture')!;
+    const rgb = rupture.lookup(1);
+
+    // Dark red = high red relative to green and blue
+    expect(rgb[0]).toBeGreaterThan(rgb[1]); // Red > green
+    expect(rgb[0]).toBeGreaterThan(rgb[2]); // Red > blue
+  });
+
+  it('should have yellow/orange tones in the middle', () => {
+    const rupture = getColormap('rupture')!;
+    const rgb = rupture.lookup(0.5);
+
+    // Yellow = high red, high green, low blue
+    expect(rgb[0]).toBeGreaterThan(150);
+    expect(rgb[1]).toBeGreaterThan(150);
+    expect(rgb[2]).toBeLessThan(100);
+  });
+
+  it('should return valid RGB for all values', () => {
+    const rupture = getColormap('rupture')!;
+
+    for (let t = 0; t <= 1; t += 0.1) {
+      const rgb = rupture.lookup(t);
+      expect(rgb).toHaveLength(3);
+      expect(rgb[0]).toBeGreaterThanOrEqual(0);
+      expect(rgb[0]).toBeLessThanOrEqual(255);
+      expect(rgb[1]).toBeGreaterThanOrEqual(0);
+      expect(rgb[1]).toBeLessThanOrEqual(255);
+      expect(rgb[2]).toBeGreaterThanOrEqual(0);
+      expect(rgb[2]).toBeLessThanOrEqual(255);
+    }
+  });
+
+  it('should clamp values outside [0, 1]', () => {
+    const rupture = getColormap('rupture')!;
+
+    const rgbNeg = rupture.lookup(-0.5);
+    const rgbOver = rupture.lookup(1.5);
+
+    // Should be clamped to endpoints
+    expect(rgbNeg).toEqual(rupture.lookup(0));
+    expect(rgbOver).toEqual(rupture.lookup(1));
+  });
+
+  it('should create valid LUT', () => {
+    const rupture = getColormap('rupture')!;
+    const lut = createLUT(rupture);
+
+    expect(lut).toBeInstanceOf(Uint8Array);
+    expect(lut.length).toBe(256 * 3);
+
+    // First entry should be greenish
+    expect(lut[1]).toBeGreaterThan(lut[0]); // G > R at start
+
+    // Last entry should be reddish
+    const lastIdx = 255 * 3;
+    expect(lut[lastIdx]).toBeGreaterThan(lut[lastIdx + 1]); // R > G at end
   });
 });

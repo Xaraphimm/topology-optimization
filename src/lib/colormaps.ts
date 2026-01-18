@@ -1,9 +1,10 @@
 /**
  * Colormaps for stress visualization
- * 
+ *
  * Provides scientifically accurate colormaps for FEA stress visualization.
  * - Thermal: Classic red-orange-yellow heat map (default)
  * - Viridis: Perceptually uniform, colorblind-friendly (scientific standard)
+ * - Rupture: Green-to-red gradient for rupture risk visualization
  */
 
 /**
@@ -92,23 +93,66 @@ const VIRIDIS_DATA: RGB[] = [
 function viridisLookup(t: number): RGB {
   // Clamp to [0, 1]
   t = Math.max(0, Math.min(1, t));
-  
+
   // Interpolate between data points
   const idx = t * (VIRIDIS_DATA.length - 1);
   const i = Math.floor(idx);
   const f = idx - i;
-  
+
   if (i >= VIRIDIS_DATA.length - 1) {
     return VIRIDIS_DATA[VIRIDIS_DATA.length - 1];
   }
-  
+
   const c0 = VIRIDIS_DATA[i];
   const c1 = VIRIDIS_DATA[i + 1];
-  
+
   return [
     Math.round(c0[0] + f * (c1[0] - c0[0])),
     Math.round(c0[1] + f * (c1[1] - c0[1])),
     Math.round(c0[2] + f * (c1[2] - c0[2])),
+  ];
+}
+
+/**
+ * Rupture risk colormap data (green = safe, red = rupture)
+ * Optimized for safety visualization with intuitive color progression
+ */
+const RUPTURE_RISK_DATA: { value: number; color: RGB }[] = [
+  { value: 0.0, color: [34, 197, 94] },    // Green (safe)
+  { value: 0.3, color: [74, 222, 128] },   // Light green
+  { value: 0.5, color: [250, 204, 21] },   // Yellow (caution)
+  { value: 0.7, color: [251, 146, 60] },   // Orange (warning)
+  { value: 0.85, color: [239, 68, 68] },   // Red (danger)
+  { value: 1.0, color: [127, 29, 29] },    // Dark red (rupture)
+];
+
+/**
+ * Rupture risk colormap (green-yellow-red)
+ * For visualizing stress and rupture risk in soft materials
+ */
+function ruptureLookup(t: number): RGB {
+  // Clamp to [0, 1]
+  t = Math.max(0, Math.min(1, t));
+
+  // Find surrounding stops
+  let lowerIdx = 0;
+  for (let i = 0; i < RUPTURE_RISK_DATA.length - 1; i++) {
+    if (t >= RUPTURE_RISK_DATA[i].value && t <= RUPTURE_RISK_DATA[i + 1].value) {
+      lowerIdx = i;
+      break;
+    }
+  }
+
+  const lower = RUPTURE_RISK_DATA[lowerIdx];
+  const upper = RUPTURE_RISK_DATA[lowerIdx + 1];
+
+  // Linear interpolation
+  const s = (t - lower.value) / (upper.value - lower.value);
+
+  return [
+    Math.round(lower.color[0] + s * (upper.color[0] - lower.color[0])),
+    Math.round(lower.color[1] + s * (upper.color[1] - lower.color[1])),
+    Math.round(lower.color[2] + s * (upper.color[2] - lower.color[2])),
   ];
 }
 
@@ -127,6 +171,12 @@ export const COLORMAPS: Colormap[] = [
     name: 'Viridis',
     description: 'Perceptually uniform, colorblind-friendly',
     lookup: viridisLookup,
+  },
+  {
+    id: 'rupture',
+    name: 'Rupture Risk',
+    description: 'Safety visualization (green = safe, red = rupture)',
+    lookup: ruptureLookup,
   },
 ];
 
