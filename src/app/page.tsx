@@ -1,13 +1,15 @@
 import { TopologyVisualizer } from '@/components/visualization/TopologyVisualizer';
+import { SoftMaterialsTab } from '@/components/visualization/SoftMaterialsTab';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { SIMPExplainer } from '@/components/content/SIMPExplainer';
 import { ExampleGallery } from '@/components/content/ExampleGallery';
+import { MainTabs } from '@/components/MainTabs';
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-background">
       <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        
+
         {/* Header */}
         <header className="mb-6">
           <div className="flex items-center justify-between gap-4">
@@ -22,19 +24,19 @@ export default function Home() {
             <ThemeToggle />
           </div>
         </header>
-        
+
         {/* Brief Introduction */}
         <div className="max-w-3xl mb-6">
           <p className="text-muted-foreground leading-relaxed">
-            Topology optimization finds the most efficient structure by removing material where 
-            it isn&apos;t needed. Watch the algorithm work in real-time—black areas are solid material 
-            carrying loads, white areas are voids. Click <strong className="text-foreground">Start</strong> to 
+            Topology optimization finds the most efficient structure by removing material where
+            it isn&apos;t needed. Watch the algorithm work in real-time—black areas are solid material
+            carrying loads, white areas are voids. Click <strong className="text-foreground">Start</strong> to
             see structures evolve from uniform blocks into optimized forms.
           </p>
         </div>
-        
-        {/* Interactive Visualizer */}
-        <TopologyVisualizer />
+
+        {/* Main Tabs: Standard and Soft Materials */}
+        <MainTabs />
         
         {/* SIMP Material Model Explainer */}
         <div className="max-w-3xl mx-auto mt-12">
