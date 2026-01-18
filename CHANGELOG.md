@@ -14,11 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Colormap selector** - Thermal (default) and Viridis colormaps for stress visualization
 - **Example Gallery** - Real-world application examples with recommended settings
 
+### Fixed - WebGL Colormap Integration
+- **Colormap switching now works in WebGL mode** - Previously, switching colormaps only affected Canvas2D fallback mode
+- Implemented 1D LUT texture for dynamic colormap selection in WebGL shader
+- LUT is regenerated when colormap selection changes, triggering immediate re-render
+
 ### Added - New Tests
-- 65 new tests (333 -> 398 total)
-- Optimized solver assembly tests
-- SharedArrayBuffer + fallback tests  
-- Colormap functionality tests
+- 81 new tests (333 -> 414 total)
+- Optimized solver assembly tests (16)
+- SharedArrayBuffer + fallback tests (10)
+- Colormap functionality tests (30)
+- WebGL LUT colormap integration tests (22)
+- Shader validation tests for LUT-based stress shader (3)
 
 ### Technical
 - New `src/lib/optimizer/optimized-solver.ts` with precomputed mesh connectivity
@@ -27,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New `ColorPaletteSelector` component for stress view
 - New `ExampleGallery` component with industry applications
 - COOP/COEP headers in `next.config.ts` for cross-origin isolation
+- WebGL stress shader now uses 1D LUT texture (256x1 RGB) for colormap sampling
+- `WebGLRenderer.updateColormapLUT()` for dynamic colormap updates
+- `useWebGLRenderer` now accepts `stressColormap` prop and rebuilds LUT on change
 
 ---
 

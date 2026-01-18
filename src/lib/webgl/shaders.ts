@@ -68,15 +68,15 @@ void main() {
 `;
 
 /**
- * Fragment shader for stress/strain energy view
- * Renders blue-white-red colormap based on stress intensity
+ * Fragment shader for stress/strain energy view (legacy - hardcoded blue-white-red)
+ * Kept for backward compatibility and testing
  * 
  * Enhanced with:
  * - Improved color interpolation using smoothstep
  * - Better perceptual uniformity
  * - Gamma-corrected output
  */
-export const stressFragmentShaderSource = `
+export const stressFragmentShaderSourceLegacy = `
 precision highp float;
 varying vec2 v_texCoord;
 uniform sampler2D u_stressTexture;
@@ -132,6 +132,40 @@ void main() {
   vec3 gammaCorrected = pow(color, vec3(INV_GAMMA));
   
   gl_FragColor = vec4(gammaCorrected, 1.0);
+}
+`;
+
+/**
+ * Fragment shader for stress/strain energy view with dynamic colormap LUT
+ * Uses a 1D texture lookup table for colormap - allows runtime palette switching
+ * 
+ * The LUT texture is a 256x1 RGB texture where each texel represents
+ * the color for that normalized stress value (0-255 maps to 0.0-1.0)
+ */
+export const stressFragmentShaderSource = `
+precision highp float;
+varying vec2 v_texCoord;
+uniform sampler2D u_stressTexture;
+uniform sampler2D u_colormapLUT;
+uniform float u_maxStress;
+
+void main() {
+  // Sample stress value at this position
+  float stress = texture2D(u_stressTexture, v_texCoord).r;
+  
+  // Apply sqrt for better visual distribution of stress values
+  // This spreads out the lower stress values which are often more numerous
+  float normalized = sqrt(stress / u_maxStress);
+  
+  // Clamp to valid range
+  normalized = clamp(normalized, 0.0, 1.0);
+  
+  // Sample color from LUT texture
+  // The LUT is a 256x1 texture, so we sample at (normalized, 0.5)
+  // Using 0.5 for Y to sample the center of the single row
+  vec3 color = texture2D(u_colormapLUT, vec2(normalized, 0.5)).rgb;
+  
+  gl_FragColor = vec4(color, 1.0);
 }
 `;
 

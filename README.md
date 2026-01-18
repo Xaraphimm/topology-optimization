@@ -2,7 +2,7 @@
 
 [![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/Xaraphimm/topology-optimization)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-398%20passing-brightgreen.svg)](./src/lib/__tests__)
+[![Tests](https://img.shields.io/badge/tests-414%20passing-brightgreen.svg)](./src/lib/__tests__)
 [![Live Demo](https://img.shields.io/badge/demo-live-success.svg)](https://topology-optimization-yump.vercel.app)
 
 Interactive web-based topology optimization using SIMP (Solid Isotropic Material with Penalization). Watch material distribute itself in real-time to create optimal structures.
@@ -87,7 +87,7 @@ Key steps:
 | **Export** | Bicubic upsampling, Marching Squares, Catmull-Rom splines |
 | **UI** | Tailwind CSS, Radix UI components |
 | **Charts** | Recharts for convergence visualization |
-| **Testing** | Vitest, 398 tests |
+| **Testing** | Vitest, 414 tests |
 
 ## Project Structure
 
@@ -140,7 +140,7 @@ The build process:
 ## Testing
 
 ```bash
-npm test              # Run all 398 tests
+npm test              # Run all 414 tests
 npm run test:watch    # Watch mode for development
 npm run test:coverage # Generate coverage report
 ```
@@ -226,11 +226,11 @@ This release has been security audited:
 - Educational descriptions with engineering context
 
 **Testing:**
-- 65 new tests (333 -> 398 total)
+- 81 new tests (333 -> 414 total)
 - Optimized solver tests (16)
 - SharedArrayBuffer tests (10)
 - Colormap system tests (30)
-- Integration tests (9)
+- WebGL LUT colormap integration tests (25)
 
 ### What's New in v2.1.0
 

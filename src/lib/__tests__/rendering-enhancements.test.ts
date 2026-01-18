@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import {
   materialFragmentShaderSource,
   stressFragmentShaderSource,
+  stressFragmentShaderSourceLegacy,
   stressToRGB,
 } from '../webgl/shaders';
 
@@ -64,33 +65,48 @@ describe('Material Fragment Shader Enhancements', () => {
 });
 
 describe('Stress Fragment Shader Enhancements', () => {
-  describe('Shader contains required components', () => {
-    it('should have gamma correction', () => {
-      expect(stressFragmentShaderSource).toContain('GAMMA');
-      expect(stressFragmentShaderSource).toContain('INV_GAMMA');
-    });
-
-    it('should use smoothstep for color transitions', () => {
-      expect(stressFragmentShaderSource).toContain('smoothstep');
-    });
-
-    it('should have improved color definitions', () => {
-      // Blue color (Tailwind blue-500)
-      expect(stressFragmentShaderSource).toContain('0.231');
-      expect(stressFragmentShaderSource).toContain('0.510');
-      expect(stressFragmentShaderSource).toContain('0.965');
-      
-      // Red color (Tailwind red-500)
-      expect(stressFragmentShaderSource).toContain('0.937');
-      expect(stressFragmentShaderSource).toContain('0.267');
-    });
-
+  describe('LUT-based shader (current)', () => {
     it('should use highp precision for better quality', () => {
       expect(stressFragmentShaderSource).toContain('precision highp float');
     });
 
     it('should apply sqrt for stress distribution', () => {
       expect(stressFragmentShaderSource).toContain('sqrt(');
+    });
+
+    it('should sample from colormap LUT texture', () => {
+      expect(stressFragmentShaderSource).toContain('u_colormapLUT');
+      expect(stressFragmentShaderSource).toContain('texture2D(u_colormapLUT');
+    });
+
+    it('should have stress texture uniform', () => {
+      expect(stressFragmentShaderSource).toContain('u_stressTexture');
+    });
+
+    it('should clamp normalized value to valid range', () => {
+      expect(stressFragmentShaderSource).toContain('clamp(');
+    });
+  });
+
+  describe('Legacy shader (hardcoded colormap)', () => {
+    it('should have gamma correction', () => {
+      expect(stressFragmentShaderSourceLegacy).toContain('GAMMA');
+      expect(stressFragmentShaderSourceLegacy).toContain('INV_GAMMA');
+    });
+
+    it('should use smoothstep for color transitions', () => {
+      expect(stressFragmentShaderSourceLegacy).toContain('smoothstep');
+    });
+
+    it('should have improved color definitions', () => {
+      // Blue color (Tailwind blue-500)
+      expect(stressFragmentShaderSourceLegacy).toContain('0.231');
+      expect(stressFragmentShaderSourceLegacy).toContain('0.510');
+      expect(stressFragmentShaderSourceLegacy).toContain('0.965');
+      
+      // Red color (Tailwind red-500)
+      expect(stressFragmentShaderSourceLegacy).toContain('0.937');
+      expect(stressFragmentShaderSourceLegacy).toContain('0.267');
     });
   });
 });

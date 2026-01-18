@@ -3,12 +3,14 @@ import {
   vertexShaderSource,
   materialFragmentShaderSource,
   stressFragmentShaderSource,
+  stressFragmentShaderSourceLegacy,
   validateShaderSource,
   stressToRGB,
   packDensitiesToTexture,
   packStressToTexture,
 } from '../webgl/shaders';
 import { WebGLRenderer } from '../webgl/WebGLRenderer';
+import { createLUT, getColormap, getDefaultColormap, COLORMAPS } from '../colormaps';
 
 describe('WebGL Shaders', () => {
   describe('validateShaderSource', () => {
@@ -78,8 +80,21 @@ describe('WebGL Shaders', () => {
       expect(stressFragmentShaderSource).toContain('u_stressTexture');
     });
 
-    it('stress shader should have stressColor function', () => {
-      expect(stressFragmentShaderSource).toContain('vec3 stressColor');
+    it('stress shader should have colormap LUT uniform', () => {
+      expect(stressFragmentShaderSource).toContain('u_colormapLUT');
+    });
+
+    it('stress shader should sample from LUT texture', () => {
+      expect(stressFragmentShaderSource).toContain('texture2D(u_colormapLUT');
+    });
+
+    it('legacy stress shader should have stressColor function', () => {
+      expect(stressFragmentShaderSourceLegacy).toContain('vec3 stressColor');
+    });
+
+    it('legacy stress shader should validate', () => {
+      const errors = validateShaderSource(stressFragmentShaderSourceLegacy);
+      expect(errors).toHaveLength(0);
     });
   });
 });
@@ -404,5 +419,162 @@ describe('Texture byte layout', () => {
     
     // Min stress (50) should map to ~64 (50/200 * 255)
     expect(Math.min(...byteData)).toBeCloseTo(64, -1);
+  });
+});
+
+describe('Colormap LUT for WebGL', () => {
+  describe('createLUT', () => {
+    it('should create LUT with correct size (256 entries * 3 channels)', () => {
+      const colormap = getDefaultColormap();
+      const lut = createLUT(colormap);
+      expect(lut).toBeInstanceOf(Uint8Array);
+      expect(lut.length).toBe(256 * 3);
+    });
+
+    it('should produce valid RGB values in range [0-255]', () => {
+      const colormap = getDefaultColormap();
+      const lut = createLUT(colormap);
+      for (let i = 0; i < lut.length; i++) {
+        expect(lut[i]).toBeGreaterThanOrEqual(0);
+        expect(lut[i]).toBeLessThanOrEqual(255);
+      }
+    });
+
+    it('should create different LUTs for different colormaps', () => {
+      const thermal = getColormap('thermal')!;
+      const viridis = getColormap('viridis')!;
+      
+      const thermalLUT = createLUT(thermal);
+      const viridisLUT = createLUT(viridis);
+      
+      // The LUTs should be different
+      let isDifferent = false;
+      for (let i = 0; i < thermalLUT.length; i++) {
+        if (thermalLUT[i] !== viridisLUT[i]) {
+          isDifferent = true;
+          break;
+        }
+      }
+      expect(isDifferent).toBe(true);
+    });
+
+    it('should create LUTs for all available colormaps', () => {
+      for (const colormap of COLORMAPS) {
+        const lut = createLUT(colormap);
+        expect(lut.length).toBe(256 * 3);
+        // First entry should be valid (entry 0)
+        expect(lut[0]).toBeGreaterThanOrEqual(0);
+        expect(lut[0]).toBeLessThanOrEqual(255);
+        // Last entry should be valid (entry 255)
+        expect(lut[255 * 3]).toBeGreaterThanOrEqual(0);
+        expect(lut[255 * 3]).toBeLessThanOrEqual(255);
+      }
+    });
+  });
+
+  describe('LUT color consistency', () => {
+    it('thermal LUT should start with blue-ish colors (low stress)', () => {
+      const thermal = getColormap('thermal')!;
+      const lut = createLUT(thermal);
+      
+      // First entry (t=0, low stress) should be blue-ish
+      const r = lut[0];
+      const g = lut[1];
+      const b = lut[2];
+      
+      // Blue channel should be significant for thermal at t=0
+      expect(b).toBeGreaterThan(100);
+    });
+
+    it('thermal LUT should end with red-ish colors (high stress)', () => {
+      const thermal = getColormap('thermal')!;
+      const lut = createLUT(thermal);
+      
+      // Last entry (t=1, high stress) should be red-ish
+      const r = lut[255 * 3];
+      const g = lut[255 * 3 + 1];
+      const b = lut[255 * 3 + 2];
+      
+      // Red should be high, others lower for thermal at t=1
+      expect(r).toBe(255);
+      expect(g).toBeLessThan(100);
+    });
+
+    it('viridis LUT should start with dark purple (low stress)', () => {
+      const viridis = getColormap('viridis')!;
+      const lut = createLUT(viridis);
+      
+      // First entry (t=0) should be dark purple [68, 1, 84]
+      const r = lut[0];
+      const g = lut[1];
+      const b = lut[2];
+      
+      expect(r).toBeCloseTo(68, -1);
+      expect(g).toBeLessThan(10);
+      expect(b).toBeCloseTo(84, -1);
+    });
+
+    it('viridis LUT should end with yellow (high stress)', () => {
+      const viridis = getColormap('viridis')!;
+      const lut = createLUT(viridis);
+      
+      // Last entry (t=1) should be yellow-ish [253, 231, 37]
+      const r = lut[255 * 3];
+      const g = lut[255 * 3 + 1];
+      const b = lut[255 * 3 + 2];
+      
+      expect(r).toBeCloseTo(253, -1);
+      expect(g).toBeCloseTo(231, -1);
+      expect(b).toBeLessThan(50);
+    });
+  });
+
+  describe('LUT texture format', () => {
+    it('LUT should be suitable for WebGL RGB texture (256x1)', () => {
+      const colormap = getDefaultColormap();
+      const lut = createLUT(colormap);
+      
+      // Should be exactly 256 RGB triplets = 768 bytes
+      expect(lut.length).toBe(768);
+      
+      // Each triplet should be valid RGB
+      for (let i = 0; i < 256; i++) {
+        const r = lut[i * 3];
+        const g = lut[i * 3 + 1];
+        const b = lut[i * 3 + 2];
+        expect(r).toBeGreaterThanOrEqual(0);
+        expect(r).toBeLessThanOrEqual(255);
+        expect(g).toBeGreaterThanOrEqual(0);
+        expect(g).toBeLessThanOrEqual(255);
+        expect(b).toBeGreaterThanOrEqual(0);
+        expect(b).toBeLessThanOrEqual(255);
+      }
+    });
+
+    it('LUT indices should map correctly to normalized stress values', () => {
+      const colormap = getDefaultColormap();
+      const lut = createLUT(colormap);
+      
+      // Index 0 = t=0.0, Index 127/128 = t≈0.5, Index 255 = t=1.0
+      // Verify the LUT is accessing colors at correct positions
+      
+      // Get color at t=0 directly from colormap
+      const c0 = colormap.lookup(0);
+      expect(lut[0]).toBe(c0[0]);
+      expect(lut[1]).toBe(c0[1]);
+      expect(lut[2]).toBe(c0[2]);
+      
+      // Get color at t=1 directly from colormap
+      const c1 = colormap.lookup(1);
+      expect(lut[255 * 3]).toBe(c1[0]);
+      expect(lut[255 * 3 + 1]).toBe(c1[1]);
+      expect(lut[255 * 3 + 2]).toBe(c1[2]);
+      
+      // Get color at t=0.5 (index 127 or 128)
+      const c05 = colormap.lookup(127 / 255);
+      expect(lut[127 * 3]).toBe(c05[0]);
+      expect(lut[127 * 3 + 1]).toBe(c05[1]);
+      expect(lut[127 * 3 + 2]).toBe(c05[2]);
+    });
   });
 });

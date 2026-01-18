@@ -234,7 +234,8 @@ export function Canvas({
     nelx,
     nely,
     viewMode,
-    initialVolumeFraction
+    initialVolumeFraction,
+    stressColormap
   );
   
   // Determine actual rendering mode

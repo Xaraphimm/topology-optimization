@@ -9,6 +9,7 @@ export {
   vertexShaderSource,
   materialFragmentShaderSource,
   stressFragmentShaderSource,
+  stressFragmentShaderSourceLegacy,
   validateShaderSource,
   stressToRGB,
   packDensitiesToTexture,

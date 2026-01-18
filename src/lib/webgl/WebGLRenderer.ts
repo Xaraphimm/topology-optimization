@@ -36,6 +36,7 @@ interface ProgramInfo {
   uniformLocations: {
     densityTexture?: WebGLUniformLocation | null;
     stressTexture?: WebGLUniformLocation | null;
+    colormapLUT?: WebGLUniformLocation | null;
     nelx?: WebGLUniformLocation | null;
     nely?: WebGLUniformLocation | null;
     maxStress?: WebGLUniformLocation | null;
@@ -52,6 +53,7 @@ export class WebGLRenderer {
   private stressProgram: ProgramInfo | null = null;
   private densityTexture: WebGLTexture | null = null;
   private stressTexture: WebGLTexture | null = null;
+  private colormapLUTTexture: WebGLTexture | null = null;
   private quadBuffer: WebGLBuffer | null = null;
   private texCoordBuffer: WebGLBuffer | null = null;
   private isInitialized = false;
@@ -225,6 +227,7 @@ export class WebGLRenderer {
       },
       uniformLocations: {
         stressTexture: gl.getUniformLocation(stressProg, 'u_stressTexture'),
+        colormapLUT: gl.getUniformLocation(stressProg, 'u_colormapLUT'),
         maxStress: gl.getUniformLocation(stressProg, 'u_maxStress'),
       },
     };
@@ -307,6 +310,18 @@ export class WebGLRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filterMode);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filterMode);
+
+    // Create colormap LUT texture (256x1 RGB)
+    // Uses LINEAR filtering for smooth color transitions
+    this.colormapLUTTexture = gl.createTexture();
+    if (!this.colormapLUTTexture) {
+      return false;
+    }
+    gl.bindTexture(gl.TEXTURE_2D, this.colormapLUTTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
     return true;
   }
@@ -405,6 +420,40 @@ export class WebGLRenderer {
   }
 
   /**
+   * Update the colormap LUT texture from a Uint8Array
+   * The LUT should be 256 entries * 3 channels (RGB) = 768 bytes
+   * Each entry maps normalized stress [0-255] -> RGB color
+   * 
+   * @param lut - Uint8Array of 768 bytes (256 RGB triplets)
+   */
+  updateColormapLUT(lut: Uint8Array): void {
+    if (!this.gl || !this.colormapLUTTexture || this.contextLost) {
+      return;
+    }
+
+    // Validate LUT size: 256 entries * 3 channels = 768 bytes
+    if (lut.length !== 256 * 3) {
+      console.warn(`WebGL: Invalid LUT size (${lut.length}), expected 768 bytes`);
+      return;
+    }
+
+    const gl = this.gl;
+
+    gl.bindTexture(gl.TEXTURE_2D, this.colormapLUTTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGB,
+      256,  // width: 256 color entries
+      1,    // height: 1 (1D texture stored as 2D)
+      0,
+      gl.RGB,
+      gl.UNSIGNED_BYTE,
+      lut
+    );
+  }
+
+  /**
    * Set mesh dimensions without updating texture data
    * This allows the renderer to prepare for incoming data
    */
@@ -495,10 +544,20 @@ export class WebGLRenderer {
         gl.uniform1i(programInfo.uniformLocations.nely, this.nely);
       }
     } else {
+      // Bind stress texture to texture unit 0
+      gl.activeTexture(gl.TEXTURE0);
       gl.bindTexture(gl.TEXTURE_2D, this.stressTexture);
       if (programInfo.uniformLocations.stressTexture !== undefined) {
         gl.uniform1i(programInfo.uniformLocations.stressTexture, 0);
       }
+      
+      // Bind colormap LUT texture to texture unit 1
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.colormapLUTTexture);
+      if (programInfo.uniformLocations.colormapLUT !== undefined) {
+        gl.uniform1i(programInfo.uniformLocations.colormapLUT, 1);
+      }
+      
       if (programInfo.uniformLocations.maxStress !== undefined) {
         gl.uniform1f(programInfo.uniformLocations.maxStress, 1.0); // Already normalized in texture
       }
@@ -529,6 +588,10 @@ export class WebGLRenderer {
         if (this.stressTexture) {
           this.gl.deleteTexture(this.stressTexture);
           this.stressTexture = null;
+        }
+        if (this.colormapLUTTexture) {
+          this.gl.deleteTexture(this.colormapLUTTexture);
+          this.colormapLUTTexture = null;
         }
         
         // Recreate textures with new filtering
@@ -569,6 +632,10 @@ export class WebGLRenderer {
     if (this.stressTexture) {
       gl.deleteTexture(this.stressTexture);
       this.stressTexture = null;
+    }
+    if (this.colormapLUTTexture) {
+      gl.deleteTexture(this.colormapLUTTexture);
+      this.colormapLUTTexture = null;
     }
 
     // Delete buffers

@@ -2,6 +2,7 @@
 
 import { RefObject, useEffect, useRef, useState, useCallback } from 'react';
 import { WebGLRenderer, ViewMode } from './WebGLRenderer';
+import { getColormap, getDefaultColormap, createLUT } from '@/lib/colormaps';
 
 interface UseWebGLRendererResult {
   isWebGLAvailable: boolean;
@@ -40,6 +41,7 @@ function isDensityArrayValid(densities: Float64Array | null, nelx: number, nely:
  * @param nely - Number of elements in y direction
  * @param viewMode - Current view mode ('material' or 'stress')
  * @param initialVolumeFraction - Volume fraction for preview rendering when densities is null
+ * @param stressColormap - Colormap ID for stress visualization (default: 'thermal')
  * @returns Object containing WebGL availability status, any error message, and manual render function
  */
 export function useWebGLRenderer(
@@ -49,7 +51,8 @@ export function useWebGLRenderer(
   nelx: number,
   nely: number,
   viewMode: ViewMode,
-  initialVolumeFraction: number = 0.5
+  initialVolumeFraction: number = 0.5,
+  stressColormap: string = 'thermal'
 ): UseWebGLRendererResult {
   const rendererRef = useRef<WebGLRenderer | null>(null);
   const [isWebGLAvailable, setIsWebGLAvailable] = useState(false);
@@ -83,12 +86,17 @@ export function useWebGLRenderer(
     setIsWebGLAvailable(true);
     setError(null);
 
+    // Initialize with default colormap LUT
+    const colormap = getColormap(stressColormap) || getDefaultColormap();
+    const lut = createLUT(colormap);
+    renderer.updateColormapLUT(lut);
+
     // Clean up on unmount
     return () => {
       renderer.dispose();
       rendererRef.current = null;
     };
-  }, [canvasRef]);
+  }, [canvasRef]); // Note: stressColormap handled in separate effect
 
   // Update density texture when data changes
   // When densities is null OR wrong size, create a uniform preview texture
@@ -139,6 +147,23 @@ export function useWebGLRenderer(
     // Immediately render after updating stress to ensure display is current
     renderer.render(viewMode);
   }, [stressEnergy, nelx, nely, viewMode]);
+
+  // Update colormap LUT when stressColormap changes
+  useEffect(() => {
+    const renderer = rendererRef.current;
+    if (!renderer || !renderer.isReady()) {
+      return;
+    }
+
+    const colormap = getColormap(stressColormap) || getDefaultColormap();
+    const lut = createLUT(colormap);
+    renderer.updateColormapLUT(lut);
+    
+    // Re-render if currently in stress view to show the new colormap
+    if (viewMode === 'stress') {
+      renderer.render(viewMode);
+    }
+  }, [stressColormap, viewMode]);
 
   // Render when view mode changes
   // Note: density/stress updates already trigger render in their respective effects
