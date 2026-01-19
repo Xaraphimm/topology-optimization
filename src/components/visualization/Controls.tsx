@@ -9,8 +9,8 @@ interface ControlsProps {
   // Preset selection
   selectedPreset: string;
   onPresetChange: (presetId: string) => void;
-  presets: { id: string; name: string }[];
-  
+  presets: { id: string; name: string; description: string }[];
+
   // Resolution selection
   selectedResolution: string;
   onResolutionChange: (resolutionId: string) => void;
@@ -61,8 +61,8 @@ export function Controls({
             <Tabs value={selectedPreset} onValueChange={onPresetChange}>
               <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${presets.length}, 1fr)` }}>
                 {presets.map((preset) => (
-                  <TabsTrigger 
-                    key={preset.id} 
+                  <TabsTrigger
+                    key={preset.id}
                     value={preset.id}
                     disabled={disabled && isRunning}
                     className="text-xs sm:text-sm"
@@ -72,6 +72,10 @@ export function Controls({
                 ))}
               </TabsList>
             </Tabs>
+            {/* Preset description */}
+            <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+              {presets.find(p => p.id === selectedPreset)?.description}
+            </p>
           </div>
           
           {/* Resolution Toggle */}

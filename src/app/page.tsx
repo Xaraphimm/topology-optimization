@@ -1,7 +1,6 @@
 import { TopologyVisualizer } from '@/components/visualization/TopologyVisualizer';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { SIMPExplainer } from '@/components/content/SIMPExplainer';
-import { ExampleGallery } from '@/components/content/ExampleGallery';
 
 export default function Home() {
   return (
@@ -40,12 +39,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto mt-12">
           <SIMPExplainer />
         </div>
-        
-        {/* Example Gallery */}
-        <div className="max-w-3xl mx-auto mt-8">
-          <ExampleGallery />
-        </div>
-        
+
         {/* What to Watch */}
         <div className="max-w-3xl mx-auto mt-8 mb-8">
           <div className="p-4 sm:p-5 bg-muted/30 rounded-lg border border-border/50">
