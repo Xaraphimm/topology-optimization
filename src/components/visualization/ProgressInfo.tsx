@@ -18,6 +18,7 @@ export function ProgressInfo({
   maxIterations,
   compliance,
   volume,
+  change,
   converged,
   isRunning,
 }: ProgressInfoProps) {
@@ -39,7 +40,12 @@ export function ProgressInfo({
         <span className="font-medium text-foreground">Compliance:</span>
         <span className="font-mono tabular-nums">{compliance < Infinity ? compliance.toFixed(2) : '—'}</span>
       </div>
-      
+
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-foreground">Change:</span>
+        <span className="font-mono tabular-nums">{change < Infinity ? change.toFixed(4) : '—'}</span>
+      </div>
+
       <div className="flex-1 min-w-[150px]">
         <div className="flex items-center gap-3">
           <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">

@@ -6,11 +6,11 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-
-const configResetKey = (config: ComparisonConfig) => JSON.stringify(config);
 import { useOptimizer, type UseOptimizerConfig, type UseOptimizerState, type HistoryPoint } from '@/lib/optimizer/useOptimizer';
 import { PRESETS, RESOLUTIONS, getMeshDimensions, getPreset } from '@/lib/presets';
 import type { SIMPConfig } from '@/lib/optimizer/simp';
+
+const configResetKey = (config: ComparisonConfig) => JSON.stringify(config);
 
 /**
  * Configuration for a single comparison panel

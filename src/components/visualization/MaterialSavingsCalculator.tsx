@@ -168,33 +168,45 @@ export function MaterialSavingsCalculator({
             </label>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground">Length</label>
+                <label htmlFor="dimension-length" className="text-xs text-muted-foreground">Length</label>
                 <input
+                  id="dimension-length"
                   type="number"
                   value={lengthMm}
-                  onChange={(e) => setLengthMm(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (!isNaN(val)) setLengthMm(Math.max(1, val));
+                  }}
                   placeholder="300"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   min={1}
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Width</label>
+                <label htmlFor="dimension-width" className="text-xs text-muted-foreground">Width</label>
                 <input
+                  id="dimension-width"
                   type="number"
                   value={widthMm}
-                  onChange={(e) => setWidthMm(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (!isNaN(val)) setWidthMm(Math.max(1, val));
+                  }}
                   placeholder="100"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   min={1}
                 />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Height</label>
+                <label htmlFor="dimension-height" className="text-xs text-muted-foreground">Height</label>
                 <input
+                  id="dimension-height"
                   type="number"
                   value={heightMm}
-                  onChange={(e) => setHeightMm(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (!isNaN(val)) setHeightMm(Math.max(1, val));
+                  }}
                   placeholder="50"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   min={1}
@@ -205,10 +217,11 @@ export function MaterialSavingsCalculator({
           
           {/* Material selection */}
           <div>
-            <label className="text-sm font-medium text-foreground block mb-2">
+            <label htmlFor="material-select" className="text-sm font-medium text-foreground block mb-2">
               Material
             </label>
             <select
+              id="material-select"
               value={selectedMaterialId}
               onChange={(e) => setSelectedMaterialId(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
