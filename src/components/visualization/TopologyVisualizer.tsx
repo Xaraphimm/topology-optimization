@@ -277,7 +277,7 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
       <Controls
         selectedPreset={selectedPreset}
         onPresetChange={handlePresetChange}
-        presets={PRESETS.map(p => ({ id: p.id, name: p.name }))}
+        presets={PRESETS.map(p => ({ id: p.id, name: p.name, description: p.description }))}
         selectedResolution={selectedResolution}
         onResolutionChange={handleResolutionChange}
         resolutions={RESOLUTIONS.map(r => ({ id: r.id, label: r.label }))}
