@@ -138,6 +138,8 @@ export function ComparisonPanel({
             <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md">
               <button
                 onClick={() => setViewMode('material')}
+                aria-label="Switch to material density view"
+                aria-pressed={viewMode === 'material'}
                 className={`px-2 py-1 text-xs font-medium rounded transition-all duration-200 ${
                   viewMode === 'material'
                     ? 'bg-background text-foreground shadow-sm'
@@ -148,6 +150,8 @@ export function ComparisonPanel({
               </button>
               <button
                 onClick={() => setViewMode('stress')}
+                aria-label="Switch to stress distribution view"
+                aria-pressed={viewMode === 'stress'}
                 className={`px-2 py-1 text-xs font-medium rounded transition-all duration-200 ${
                   viewMode === 'stress'
                     ? 'bg-background text-foreground shadow-sm'
@@ -257,9 +261,9 @@ export function ComparisonPanel({
             disabled={hasStarted && isRunning}
             className="w-full"
           />
-          <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-            <span>Less</span>
-            <span>More</span>
+          <div className="flex justify-between text-xs text-muted-foreground mt-0.5">
+            <span>Less material</span>
+            <span>More material</span>
           </div>
         </div>
         

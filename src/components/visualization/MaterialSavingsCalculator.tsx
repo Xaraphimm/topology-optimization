@@ -87,7 +87,7 @@ export function MaterialSavingsCalculator({
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="font-semibold text-foreground flex items-center gap-2">
-              <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               Material Savings
@@ -142,6 +142,8 @@ export function MaterialSavingsCalculator({
       {/* Advanced settings toggle */}
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
+        aria-label={showAdvanced ? 'Hide custom dimensions and materials' : 'Show custom dimensions and materials'}
+        aria-expanded={showAdvanced}
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <svg
@@ -149,6 +151,7 @@ export function MaterialSavingsCalculator({
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
@@ -170,6 +173,7 @@ export function MaterialSavingsCalculator({
                   type="number"
                   value={lengthMm}
                   onChange={(e) => setLengthMm(Math.max(1, Number(e.target.value)))}
+                  placeholder="300"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   min={1}
                 />
@@ -180,6 +184,7 @@ export function MaterialSavingsCalculator({
                   type="number"
                   value={widthMm}
                   onChange={(e) => setWidthMm(Math.max(1, Number(e.target.value)))}
+                  placeholder="100"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   min={1}
                 />
@@ -190,6 +195,7 @@ export function MaterialSavingsCalculator({
                   type="number"
                   value={heightMm}
                   onChange={(e) => setHeightMm(Math.max(1, Number(e.target.value)))}
+                  placeholder="50"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   min={1}
                 />
