@@ -184,6 +184,8 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
             <div className="flex items-center gap-1 p-0.5 bg-muted/50 rounded-lg">
               <button
                 onClick={() => setViewMode('material')}
+                aria-label="Switch to material density view"
+                aria-pressed={viewMode === 'material'}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
                   viewMode === 'material'
                     ? 'bg-background text-foreground shadow-sm'
@@ -194,6 +196,8 @@ export function TopologyVisualizer({ className = '' }: TopologyVisualizerProps) 
               </button>
               <button
                 onClick={() => setViewMode('stress')}
+                aria-label="Switch to stress distribution view"
+                aria-pressed={viewMode === 'stress'}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 ${
                   viewMode === 'stress'
                     ? 'bg-background text-foreground shadow-sm'
