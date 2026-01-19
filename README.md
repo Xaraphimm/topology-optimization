@@ -273,7 +273,7 @@ This release has been security audited:
 
 MIT License - see [LICENSE](./LICENSE) for details
 
-Copyright (c) 2025 PHNX Foundry | Xaraphim
+Copyright (c) 2026 PHNX Foundry | Xaraphim
 
 ---
 

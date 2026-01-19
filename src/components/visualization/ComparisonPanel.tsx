@@ -276,7 +276,7 @@ export function ComparisonPanel({
               {hasStarted ? 'Continue' : 'Start'}
             </Button>
           )}
-          <Button onClick={onReset} variant="outline" size="sm" className="gap-1">
+          <Button onClick={onReset} variant="outline" size="sm" className="gap-1" aria-label="Reset optimization">
             <RotateCcw className="w-3 h-3" />
           </Button>
         </div>
