@@ -66,6 +66,40 @@ export const DEFAULT_SVG_EXPORT_OPTIONS: SVGExportOptions = {
 };
 
 /**
+ * Validate and sanitize a color value for safe SVG embedding.
+ * Prevents SVG injection attacks by only allowing valid CSS color formats.
+ *
+ * @param color - Color string to validate
+ * @param fallback - Fallback color if validation fails
+ * @returns Safe color string
+ */
+function sanitizeColor(color: string, fallback: string): string {
+  if (!color) return fallback;
+
+  // Allow hex colors: #RGB, #RRGGBB, #RRGGBBAA
+  if (/^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?([0-9A-Fa-f]{2})?$/.test(color)) {
+    return color;
+  }
+
+  // Allow rgb/rgba: rgb(255, 255, 255) or rgba(255, 255, 255, 0.5)
+  if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+))?\s*\)$/.test(color)) {
+    return color;
+  }
+
+  // Allow named colors (common subset)
+  const namedColors = [
+    'black', 'white', 'red', 'green', 'blue', 'yellow', 'cyan', 'magenta',
+    'gray', 'grey', 'orange', 'purple', 'pink', 'brown', 'transparent', 'none'
+  ];
+  if (namedColors.includes(color.toLowerCase())) {
+    return color.toLowerCase();
+  }
+
+  // Invalid color - return fallback
+  return fallback;
+}
+
+/**
  * Marching Squares edge table
  * Maps each of the 16 cell configurations to the edges crossed by the contour
  * Edges: 0=bottom, 1=right, 2=top, 3=left
@@ -418,30 +452,35 @@ export function generateSVG(
   svg += `  <title>Topology Optimization Result</title>\n`;
   svg += `  <desc>Generated from topology optimization density field</desc>\n`;
   
+  // Sanitize color inputs to prevent SVG injection
+  const safeBgColor = sanitizeColor(opts.backgroundColor, '#ffffff');
+  const safeFillColor = sanitizeColor(opts.fillColor, '#000000');
+  const safeStrokeColor = sanitizeColor(opts.strokeColor, '');
+
   // Background
-  if (opts.backgroundColor) {
-    svg += `  <rect width="100%" height="100%" fill="${opts.backgroundColor}"/>\n`;
+  if (safeBgColor && safeBgColor !== 'transparent' && safeBgColor !== 'none') {
+    svg += `  <rect width="100%" height="100%" fill="${safeBgColor}"/>\n`;
   }
-  
+
   // Combine all contours into a single path using fill-rule="evenodd"
   // This correctly handles nested contours (holes)
   if (contours.length > 0) {
-    const allPaths = contours.map(c => 
+    const allPaths = contours.map(c =>
       contourToPathData(c, opts.scale, opts.padding, opts.padding, nely)
     ).join(' ');
-    
+
     let pathAttrs = `d="${allPaths}"`;
-    pathAttrs += ` fill="${opts.fillColor}"`;
+    pathAttrs += ` fill="${safeFillColor}"`;
     pathAttrs += ` fill-rule="evenodd"`;
-    
-    if (opts.strokeColor && opts.strokeWidth > 0) {
-      pathAttrs += ` stroke="${opts.strokeColor}"`;
+
+    if (safeStrokeColor && opts.strokeWidth > 0) {
+      pathAttrs += ` stroke="${safeStrokeColor}"`;
       pathAttrs += ` stroke-width="${opts.strokeWidth}"`;
       pathAttrs += ` stroke-linejoin="round"`;
     } else {
       pathAttrs += ` stroke="none"`;
     }
-    
+
     svg += `  <path ${pathAttrs}/>\n`;
   }
   
