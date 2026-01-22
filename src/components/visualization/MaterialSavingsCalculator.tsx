@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   MATERIALS,
   getMaterial,
@@ -8,9 +8,18 @@ import {
   formatMass,
   formatCost,
   type Dimensions,
-  type Material,
   type SavingsResult,
 } from '@/lib/material-savings';
+import { clampNumber } from '@/lib/validation';
+
+/** Dimension constraints in mm */
+const DIMENSION_CONSTRAINTS = {
+  MIN: 1,
+  MAX: 100000, // 100m max
+  DEFAULT_LENGTH: 300,
+  DEFAULT_WIDTH: 100,
+  DEFAULT_HEIGHT: 50,
+} as const;
 
 interface MaterialSavingsCalculatorProps {
   volumeFraction: number;
@@ -19,24 +28,43 @@ interface MaterialSavingsCalculatorProps {
 
 /**
  * Material Savings Calculator
- * 
+ *
  * Shows how much material, weight, and cost is saved through topology optimization.
  * Allows users to input custom dimensions and select different materials.
+ *
+ * Security: All numeric inputs are validated and sanitized.
  */
 export function MaterialSavingsCalculator({
   volumeFraction,
   className = '',
 }: MaterialSavingsCalculatorProps) {
   // Dimensions state (in mm for user input, converted to m for calculations)
-  const [lengthMm, setLengthMm] = useState(300);  // 300mm = 30cm
-  const [widthMm, setWidthMm] = useState(100);    // 100mm = 10cm
-  const [heightMm, setHeightMm] = useState(50);   // 50mm = 5cm
-  
+  const [lengthMm, setLengthMm] = useState<number>(DIMENSION_CONSTRAINTS.DEFAULT_LENGTH);
+  const [widthMm, setWidthMm] = useState<number>(DIMENSION_CONSTRAINTS.DEFAULT_WIDTH);
+  const [heightMm, setHeightMm] = useState<number>(DIMENSION_CONSTRAINTS.DEFAULT_HEIGHT);
+
   // Selected material
   const [selectedMaterialId, setSelectedMaterialId] = useState('aluminum-6061');
-  
+
   // Show/hide advanced settings
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  /**
+   * Safely parse and validate dimension input
+   * Handles NaN, negative numbers, and extreme values
+   */
+  const handleDimensionChange = useCallback(
+    (value: string, setter: (val: number) => void, defaultVal: number) => {
+      const safeValue = clampNumber(
+        value,
+        DIMENSION_CONSTRAINTS.MIN,
+        DIMENSION_CONSTRAINTS.MAX,
+        defaultVal
+      );
+      setter(safeValue);
+    },
+    []
+  );
   
   // Convert mm to m for calculations
   const dimensions: Dimensions = useMemo(() => ({
@@ -172,10 +200,17 @@ export function MaterialSavingsCalculator({
                 <input
                   type="number"
                   value={lengthMm}
-                  onChange={(e) => setLengthMm(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) =>
+                    handleDimensionChange(
+                      e.target.value,
+                      setLengthMm,
+                      DIMENSION_CONSTRAINTS.DEFAULT_LENGTH
+                    )
+                  }
                   placeholder="300"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  min={1}
+                  min={DIMENSION_CONSTRAINTS.MIN}
+                  max={DIMENSION_CONSTRAINTS.MAX}
                 />
               </div>
               <div>
@@ -183,10 +218,17 @@ export function MaterialSavingsCalculator({
                 <input
                   type="number"
                   value={widthMm}
-                  onChange={(e) => setWidthMm(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) =>
+                    handleDimensionChange(
+                      e.target.value,
+                      setWidthMm,
+                      DIMENSION_CONSTRAINTS.DEFAULT_WIDTH
+                    )
+                  }
                   placeholder="100"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  min={1}
+                  min={DIMENSION_CONSTRAINTS.MIN}
+                  max={DIMENSION_CONSTRAINTS.MAX}
                 />
               </div>
               <div>
@@ -194,10 +236,17 @@ export function MaterialSavingsCalculator({
                 <input
                   type="number"
                   value={heightMm}
-                  onChange={(e) => setHeightMm(Math.max(1, Number(e.target.value)))}
+                  onChange={(e) =>
+                    handleDimensionChange(
+                      e.target.value,
+                      setHeightMm,
+                      DIMENSION_CONSTRAINTS.DEFAULT_HEIGHT
+                    )
+                  }
                   placeholder="50"
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  min={1}
+                  min={DIMENSION_CONSTRAINTS.MIN}
+                  max={DIMENSION_CONSTRAINTS.MAX}
                 />
               </div>
             </div>

@@ -1,11 +1,13 @@
 /**
  * SIMP (Solid Isotropic Material with Penalization) Topology Optimization
- * 
+ *
  * Main optimizer class that orchestrates the topology optimization process.
  * Based on Sigmund's 99-line MATLAB code with improvements for browser performance.
- * 
+ *
  * v2.2.0: Uses optimized solver with precomputed CSR sparsity and reusable scratch arrays
  * for 2-4x higher resolution support.
+ *
+ * v2.3.0: Refactored to use centralized constants module.
  */
 
 import { computeElementStiffness, getElementDOFs, getTotalDOFs, getNodeIndex } from './fem';
@@ -19,37 +21,53 @@ import {
   type SolverScratch,
 } from './optimized-solver';
 import type { OptimizationState, ProblemDefinition } from './types';
+import {
+  MESH_DEFAULTS,
+  SIMP_DEFAULTS,
+  OC_PARAMS,
+  CG_PARAMS,
+} from './constants';
 
 /**
  * Configuration for the optimizer
  */
 export interface SIMPConfig {
-  nelx: number;           // Elements in x direction
-  nely: number;           // Elements in y direction
-  volfrac: number;        // Target volume fraction (0-1)
-  penal: number;          // Penalization power (typically 3)
-  rmin: number;           // Filter radius (in elements)
-  maxIter: number;        // Maximum iterations
-  tolx: number;           // Convergence tolerance for density change
-  Emin: number;           // Minimum Young's modulus
-  E0: number;             // Solid material Young's modulus
-  nu: number;             // Poisson's ratio
+  /** Number of elements in x direction */
+  nelx: number;
+  /** Number of elements in y direction */
+  nely: number;
+  /** Target volume fraction (0-1) */
+  volfrac: number;
+  /** Penalization power (typically 3) */
+  penal: number;
+  /** Filter radius (in elements) */
+  rmin: number;
+  /** Maximum iterations */
+  maxIter: number;
+  /** Convergence tolerance for density change */
+  tolx: number;
+  /** Minimum Young's modulus */
+  Emin: number;
+  /** Solid material Young's modulus */
+  E0: number;
+  /** Poisson's ratio */
+  nu: number;
 }
 
 /**
- * Default configuration
+ * Default configuration using centralized constants
  */
 export const DEFAULT_CONFIG: SIMPConfig = {
-  nelx: 60,
-  nely: 20,
-  volfrac: 0.5,
-  penal: 3.0,
-  rmin: 1.5,
-  maxIter: 200,
-  tolx: 0.01,
-  Emin: 1e-9,
-  E0: 1.0,
-  nu: 0.3,
+  nelx: MESH_DEFAULTS.NELX,
+  nely: MESH_DEFAULTS.NELY,
+  volfrac: SIMP_DEFAULTS.VOLUME_FRACTION,
+  penal: SIMP_DEFAULTS.PENALIZATION,
+  rmin: SIMP_DEFAULTS.FILTER_RADIUS,
+  maxIter: SIMP_DEFAULTS.MAX_ITERATIONS,
+  tolx: SIMP_DEFAULTS.CONVERGENCE_TOLERANCE,
+  Emin: SIMP_DEFAULTS.E_MIN,
+  E0: SIMP_DEFAULTS.E_SOLID,
+  nu: SIMP_DEFAULTS.POISSON_RATIO,
 };
 
 /**
@@ -319,34 +337,36 @@ export class SIMPOptimizer {
   private updateDensities(dc: Float64Array): void {
     const { nelx, nely, volfrac } = this.config;
     const nelem = nelx * nely;
-    const move = 0.2; // Move limit
-    
+
     // Bisection to find Lagrange multiplier
-    let l1 = 0;
-    let l2 = 1e9;
-    
-    while ((l2 - l1) / (l1 + l2) > 1e-3) {
+    let l1: number = 0;
+    let l2: number = OC_PARAMS.BISECTION_UPPER;
+
+    while ((l2 - l1) / (l1 + l2) > OC_PARAMS.BISECTION_TOL) {
       const lmid = 0.5 * (l2 + l1);
-      
+
       // Compute new densities
       let volNew = 0;
       for (let i = 0; i < nelem; i++) {
         const xold = this.xold[i];
-        
+
         // OC update formula
         const Be = -dc[i] / lmid;
         let xnew = xold * Math.sqrt(Be);
-        
+
         // Apply move limits
-        xnew = Math.max(Math.max(0.0, xold - move), Math.min(Math.min(1.0, xold + move), xnew));
-        
-        // Clamp to [0, 1]
-        xnew = Math.max(0.001, Math.min(1.0, xnew));
-        
+        xnew = Math.max(
+          Math.max(0.0, xold - OC_PARAMS.MOVE_LIMIT),
+          Math.min(Math.min(OC_PARAMS.DENSITY_MAX, xold + OC_PARAMS.MOVE_LIMIT), xnew)
+        );
+
+        // Clamp to [DENSITY_MIN, DENSITY_MAX]
+        xnew = Math.max(OC_PARAMS.DENSITY_MIN, Math.min(OC_PARAMS.DENSITY_MAX, xnew));
+
         this.densities[i] = xnew;
         volNew += xnew;
       }
-      
+
       // Adjust bisection bounds
       if (volNew / nelem > volfrac) {
         l1 = lmid;
