@@ -1,17 +1,19 @@
 /**
  * SVG vector export for topology optimization results
- * 
+ *
  * Uses Marching Squares algorithm to extract smooth contours from the
  * density field and exports them as scalable vector graphics.
- * 
+ *
  * Features:
  * - Isodensity contour extraction at configurable threshold
  * - Catmull-Rom spline smoothing for curves
  * - Multiple contour support (handles holes and islands)
  * - Configurable SVG styling
+ * - Input validation and sanitization for security
  */
 
 import { sampleDensity } from './upsampling';
+import { sanitizeCSSColor, escapeXML, clampNumber } from '../validation';
 
 /**
  * 2D point
@@ -381,12 +383,13 @@ function contourToPathData(
 
 /**
  * Generate SVG string from density field
- * 
+ *
  * @param densities - Density array
  * @param nelx - Number of elements in x
  * @param nely - Number of elements in y
  * @param options - Export options
  * @returns SVG string
+ * @throws Error if densities array is invalid
  */
 export function generateSVG(
   densities: Float64Array,
@@ -394,59 +397,86 @@ export function generateSVG(
   nely: number,
   options: Partial<SVGExportOptions> = {}
 ): string {
+  // Validate inputs
+  const safeNelx = clampNumber(nelx, 1, 10000, 60);
+  const safeNely = clampNumber(nely, 1, 10000, 20);
+  const expectedLength = safeNelx * safeNely;
+
+  if (!densities || densities.length !== expectedLength) {
+    throw new Error(
+      `Invalid density array: expected ${expectedLength} elements, got ${densities?.length ?? 0}`
+    );
+  }
+
   const opts = { ...DEFAULT_SVG_EXPORT_OPTIONS, ...options };
-  
+
+  // Sanitize color inputs to prevent XSS/injection
+  const safeFillColor = sanitizeCSSColor(opts.fillColor, '#000000');
+  const safeStrokeColor = opts.strokeColor
+    ? sanitizeCSSColor(opts.strokeColor, '')
+    : '';
+  const safeBgColor = opts.backgroundColor
+    ? sanitizeCSSColor(opts.backgroundColor, '#ffffff')
+    : '';
+
+  // Validate numeric options
+  const safeThreshold = clampNumber(opts.threshold, 0, 1, 0.5);
+  const safeScale = clampNumber(opts.scale, 0.1, 100, 10);
+  const safePadding = clampNumber(opts.padding, 0, 100, 0);
+  const safeStrokeWidth = clampNumber(opts.strokeWidth, 0, 100, 0);
+  const safeSmoothingRes = clampNumber(opts.smoothingResolution, 1, 20, 4);
+
   // Extract contours
-  let contours = extractContours(densities, nelx, nely, opts.threshold);
-  
+  let contours = extractContours(densities, safeNelx, safeNely, safeThreshold);
+
   // Smooth contours if requested
   if (opts.smoothing) {
-    contours = contours.map(c => smoothContour(c, opts.smoothingResolution));
+    contours = contours.map(c => smoothContour(c, safeSmoothingRes));
   }
-  
+
   // Calculate SVG dimensions
-  const width = (nelx + opts.padding * 2) * opts.scale;
-  const height = (nely + opts.padding * 2) * opts.scale;
-  
-  // Build SVG
+  const width = (safeNelx + safePadding * 2) * safeScale;
+  const height = (safeNely + safePadding * 2) * safeScale;
+
+  // Build SVG with escaped values
   let svg = `<?xml version="1.0" encoding="UTF-8"?>\n`;
   svg += `<svg width="${width}" height="${height}" `;
   svg += `viewBox="0 0 ${width} ${height}" `;
   svg += `xmlns="http://www.w3.org/2000/svg">\n`;
-  
-  // Add title and description
-  svg += `  <title>Topology Optimization Result</title>\n`;
-  svg += `  <desc>Generated from topology optimization density field</desc>\n`;
-  
+
+  // Add title and description (escaped for safety)
+  svg += `  <title>${escapeXML('Topology Optimization Result')}</title>\n`;
+  svg += `  <desc>${escapeXML('Generated from topology optimization density field')}</desc>\n`;
+
   // Background
-  if (opts.backgroundColor) {
-    svg += `  <rect width="100%" height="100%" fill="${opts.backgroundColor}"/>\n`;
+  if (safeBgColor) {
+    svg += `  <rect width="100%" height="100%" fill="${safeBgColor}"/>\n`;
   }
-  
+
   // Combine all contours into a single path using fill-rule="evenodd"
   // This correctly handles nested contours (holes)
   if (contours.length > 0) {
-    const allPaths = contours.map(c => 
-      contourToPathData(c, opts.scale, opts.padding, opts.padding, nely)
+    const allPaths = contours.map(c =>
+      contourToPathData(c, safeScale, safePadding, safePadding, safeNely)
     ).join(' ');
-    
+
     let pathAttrs = `d="${allPaths}"`;
-    pathAttrs += ` fill="${opts.fillColor}"`;
+    pathAttrs += ` fill="${safeFillColor}"`;
     pathAttrs += ` fill-rule="evenodd"`;
-    
-    if (opts.strokeColor && opts.strokeWidth > 0) {
-      pathAttrs += ` stroke="${opts.strokeColor}"`;
-      pathAttrs += ` stroke-width="${opts.strokeWidth}"`;
+
+    if (safeStrokeColor && safeStrokeWidth > 0) {
+      pathAttrs += ` stroke="${safeStrokeColor}"`;
+      pathAttrs += ` stroke-width="${safeStrokeWidth}"`;
       pathAttrs += ` stroke-linejoin="round"`;
     } else {
       pathAttrs += ` stroke="none"`;
     }
-    
+
     svg += `  <path ${pathAttrs}/>\n`;
   }
-  
+
   svg += `</svg>`;
-  
+
   return svg;
 }
 

@@ -1,14 +1,17 @@
 /**
  * High-resolution image export for topology optimization results
- * 
+ *
  * Provides PNG and JPEG export with configurable:
  * - Resolution upsampling (bicubic/bilinear)
  * - Color schemes (grayscale, stress colormap)
  * - Background color
  * - Quality settings
+ *
+ * Security: All color inputs are validated and sanitized
  */
 
 import { upsampleDensities, InterpolationMethod } from './upsampling';
+import { parseColorToRGB, clampNumber, type RGBTuple } from '../validation';
 
 /**
  * Color scheme for export
@@ -149,37 +152,17 @@ function densityToStressColor(
 
 /**
  * Parse CSS color to RGB values
+ * Uses secure parsing from validation module
+ *
+ * @param color - CSS color string
+ * @returns RGB tuple [r, g, b] with values 0-255
  */
-function parseColor(color: string): [number, number, number] {
-  // Handle hex colors
-  if (color.startsWith('#')) {
-    const hex = color.slice(1);
-    if (hex.length === 3) {
-      return [
-        parseInt(hex[0] + hex[0], 16),
-        parseInt(hex[1] + hex[1], 16),
-        parseInt(hex[2] + hex[2], 16),
-      ];
-    } else if (hex.length === 6) {
-      return [
-        parseInt(hex.slice(0, 2), 16),
-        parseInt(hex.slice(2, 4), 16),
-        parseInt(hex.slice(4, 6), 16),
-      ];
-    }
+function parseColor(color: string): RGBTuple {
+  const parsed = parseColorToRGB(color);
+  if (parsed) {
+    return parsed;
   }
-  
-  // Handle rgb() and rgba()
-  const rgbMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-  if (rgbMatch) {
-    return [
-      parseInt(rgbMatch[1]),
-      parseInt(rgbMatch[2]),
-      parseInt(rgbMatch[3]),
-    ];
-  }
-  
-  // Default to white
+  // Default to white if parsing fails
   return [255, 255, 255];
 }
 
@@ -256,12 +239,13 @@ export function renderToCanvas(
 
 /**
  * Export density data as a high-resolution image
- * 
+ *
  * @param densities - Source density array (nelx * nely)
  * @param nelx - Number of elements in x direction
  * @param nely - Number of elements in y direction
  * @param options - Export options
  * @returns Promise resolving to Blob containing image data
+ * @throws Error if inputs are invalid
  */
 export async function exportImage(
   densities: Float64Array,
@@ -270,18 +254,28 @@ export async function exportImage(
   options: Partial<ImageExportOptions> = {}
 ): Promise<Blob> {
   const opts = { ...DEFAULT_IMAGE_EXPORT_OPTIONS, ...options };
-  
-  // Validate inputs
-  if (densities.length !== nelx * nely) {
-    throw new Error(`Density array size (${densities.length}) doesn't match dimensions (${nelx}x${nely})`);
+
+  // Validate dimensions
+  const safeNelx = clampNumber(nelx, 1, 10000, 60);
+  const safeNely = clampNumber(nely, 1, 10000, 20);
+  const expectedLength = safeNelx * safeNely;
+
+  // Validate density array
+  if (!densities || densities.length !== expectedLength) {
+    throw new Error(
+      `Density array size (${densities?.length ?? 0}) doesn't match dimensions (${safeNelx}x${safeNely})`
+    );
   }
-  
-  // Upsample the density field
+
+  // Validate scale to prevent memory issues
+  const safeScale = clampNumber(opts.scale, 1, 32, 4);
+
+  // Upsample the density field using validated dimensions
   const { data: upsampled, width, height } = upsampleDensities(
     densities,
-    nelx,
-    nely,
-    { scale: opts.scale, method: opts.interpolation }
+    safeNelx,
+    safeNely,
+    { scale: safeScale, method: opts.interpolation }
   );
   
   // Render to canvas

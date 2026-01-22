@@ -1,11 +1,14 @@
 /**
  * Linear system solvers for topology optimization
- * 
+ *
  * Implements Preconditioned Conjugate Gradient (PCG) method
  * which is efficient for large sparse symmetric positive definite systems
+ *
+ * v2.3.0: Refactored to use centralized constants module.
  */
 
 import { getElementDOFs, computeElementStiffness, getTotalDOFs } from './fem';
+import { CG_PARAMS, SIMP_DEFAULTS } from './constants';
 
 /**
  * Sparse matrix in CSR (Compressed Sparse Row) format
@@ -20,11 +23,11 @@ export interface CSRMatrix {
 
 /**
  * Assemble the global stiffness matrix in CSR format
- * 
+ *
  * Uses the SIMP material interpolation: E(ρ) = E_min + ρ^p * (E_0 - E_min)
- * 
+ *
  * @param nelx - Number of elements in x
- * @param nely - Number of elements in y  
+ * @param nely - Number of elements in y
  * @param densities - Element densities (nelx * nely elements)
  * @param penal - Penalization power
  * @param Emin - Minimum stiffness (to avoid singularity)
@@ -35,10 +38,10 @@ export function assembleStiffnessMatrix(
   nelx: number,
   nely: number,
   densities: Float64Array,
-  penal: number = 3.0,
-  Emin: number = 1e-9,
-  E0: number = 1.0,
-  nu: number = 0.3
+  penal: number = SIMP_DEFAULTS.PENALIZATION,
+  Emin: number = SIMP_DEFAULTS.E_MIN,
+  E0: number = SIMP_DEFAULTS.E_SOLID,
+  nu: number = SIMP_DEFAULTS.POISSON_RATIO
 ): CSRMatrix {
   const nDofs = getTotalDOFs(nelx, nely);
   const KE = computeElementStiffness(1.0, nu); // Unit stiffness matrix
@@ -231,7 +234,7 @@ export function applyBoundaryConditions(
 /**
  * Preconditioned Conjugate Gradient solver
  * Solves A * x = b for symmetric positive definite A
- * 
+ *
  * @param A - Sparse matrix in CSR format
  * @param b - Right-hand side vector
  * @param x0 - Initial guess (modified in place to store solution)
@@ -243,8 +246,8 @@ export function conjugateGradient(
   A: CSRMatrix,
   b: Float64Array,
   x0: Float64Array,
-  tol: number = 1e-8,
-  maxIter: number = 10000
+  tol: number = CG_PARAMS.TOLERANCE,
+  maxIter: number = CG_PARAMS.MAX_ITERATIONS
 ): { x: Float64Array; iterations: number; residual: number } {
   const n = A.n;
   const x = x0; // Modify in place
@@ -334,22 +337,22 @@ export function solveFEM(
   densities: Float64Array,
   forces: Float64Array,
   fixedDofs: number[],
-  penal: number = 3.0,
-  Emin: number = 1e-9,
-  E0: number = 1.0,
-  nu: number = 0.3
+  penal: number = SIMP_DEFAULTS.PENALIZATION,
+  Emin: number = SIMP_DEFAULTS.E_MIN,
+  E0: number = SIMP_DEFAULTS.E_SOLID,
+  nu: number = SIMP_DEFAULTS.POISSON_RATIO
 ): Float64Array {
   // Assemble stiffness matrix
   const K = assembleStiffnessMatrix(nelx, nely, densities, penal, Emin, E0, nu);
-  
+
   // Apply boundary conditions
   const fMod = applyBoundaryConditions(K, forces, fixedDofs);
-  
+
   // Initial guess (zeros)
   const u = new Float64Array(K.n);
-  
-  // Solve
-  const result = conjugateGradient(K, fMod, u, 1e-8, 10000);
-  
+
+  // Solve using CG with default parameters
+  const result = conjugateGradient(K, fMod, u);
+
   return result.x;
 }

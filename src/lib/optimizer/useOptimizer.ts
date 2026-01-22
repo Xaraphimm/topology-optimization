@@ -1,13 +1,16 @@
 /**
  * React hook for managing SIMP optimization via Web Worker
- * 
+ *
  * Provides a clean interface for the UI to control optimization
  * while keeping computations off the main thread.
+ *
+ * v2.3.0: Refactored to use centralized constants module.
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { SIMPConfig } from './simp';
 import type { WorkerCommand, WorkerMessage, SerializedOptimizationState } from './simp.worker';
+import { HISTORY_PARAMS, SIMP_DEFAULTS } from './constants';
 
 export interface UseOptimizerConfig {
   config: Partial<SIMPConfig>;
@@ -47,18 +50,19 @@ export interface UseOptimizerReturn {
   step: () => void;
 }
 
+/**
+ * Initial state for optimizer hook
+ * Uses SIMP_DEFAULTS for default volume fraction
+ */
 const INITIAL_STATE: UseOptimizerState = {
   densities: new Float64Array(0),
   strainEnergy: new Float64Array(0),
   compliance: Infinity,
-  volume: 0.5,
+  volume: SIMP_DEFAULTS.VOLUME_FRACTION,
   iteration: 0,
   converged: false,
   change: 1.0,
 };
-
-// Maximum history points to keep (prevents memory issues on long runs)
-const MAX_HISTORY_POINTS = 250;
 
 /**
  * Convert serialized state back to typed arrays
@@ -112,8 +116,8 @@ export function useOptimizer(
         
         const updated = [...prev, newPoint];
         // Cap at max points
-        if (updated.length > MAX_HISTORY_POINTS) {
-          return updated.slice(-MAX_HISTORY_POINTS);
+        if (updated.length > HISTORY_PARAMS.MAX_POINTS) {
+          return updated.slice(-HISTORY_PARAMS.MAX_POINTS);
         }
         return updated;
       });
